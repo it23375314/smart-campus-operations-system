@@ -1,31 +1,25 @@
-import { useState } from 'react'
-
+// src/App.jsx
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import MyIncidents from './pages/tickets/MyIncidents';
+import CreateIncident from './pages/tickets/CreateIncident'; // Adjust path if needed
+import AdminDashboard from './pages/tickets/AdminDashboard';
+import UpdateIncident from './pages/tickets/UpdateIncident'
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">
-          Vite + React
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Tailwind CSS is configured and working!
-        </p>
-        
-        <button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-        
-        <div className="mt-8 text-sm text-gray-500">
-          <p>Ready to start building your application!</p>
-        </div>
-      </div>
-    </div>
-  )
+    <Router>
+      {/* The Navbar stays at the top of every page */}
+      <Navbar />
+      
+      {/* The Routes decide which page to show based on the URL */}
+      <Routes>
+        <Route path="/" element={<MyIncidents />} />
+        <Route path="/create" element={<CreateIncident />} />
+        <Route path="/admin" element={<AdminDashboard />} />
+        <Route path="/update/:id" element={<UpdateIncident />} />
+      </Routes>
+    </Router>
+  );
 }
 
-export default App
+export default App;
