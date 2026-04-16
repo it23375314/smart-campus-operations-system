@@ -1,31 +1,64 @@
-import { useState } from 'react'
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import Navbar from './components/Navbar';
+import HomePage from './pages/HomePage';
+import DashboardPage from './pages/DashboardPage';
+import BookingFormPage from './pages/BookingFormPage';
+import MyBookingsPage from './pages/MyBookingsPage';
+import AdminDashboard from './pages/AdminDashboard';
+import AvailabilityView from './pages/AvailabilityView';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">
-          Vite + React
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Tailwind CSS is configured and working!
-        </p>
-        
-        <button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-        
-        <div className="mt-8 text-sm text-gray-500">
-          <p>Ready to start building your application!</p>
-        </div>
+    <Router>
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <main className="">
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            
+            {/* Standard User Dashboard */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Booking flow for Users and Admins */}
+            <Route path="/bookings" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <BookingFormPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* View own or all bookings */}
+            <Route path="/my-bookings" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
+                <MyBookingsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Resource visibility */}
+            <Route path="/availability" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
+                <AvailabilityView />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin only dashboard */}
+            <Route path="/admin" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                <AdminDashboard />
+              </ProtectedRoute>
+            } />
+          </Routes>
+        </main>
       </div>
-    </div>
-  )
+    </Router>
+  );
 }
 
-export default App
+export default App;
