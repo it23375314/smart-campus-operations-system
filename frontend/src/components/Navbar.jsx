@@ -12,7 +12,13 @@ import {
   UserCircle,
   Bell,
   Settings,
-  BarChart3
+  BarChart3,
+  Hexagon,
+  Info,
+  LayoutDashboard,
+  ListChecks,
+  LineChart,
+  Activity
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -32,17 +38,41 @@ const Navbar = () => {
     window.location.reload();
   };
 
-  const navItems = [
-    { path: '/', label: 'Home', icon: <Home size={18} />, roles: ['USER', 'ADMIN', 'MANAGER'] },
-    { path: '/dashboard', label: 'Dashboard', icon: <BarChart3 size={18} />, roles: ['USER', 'ADMIN', 'MANAGER'] },
-    { path: '/bookings', label: 'Book Now', icon: <PlusCircle size={18} />, roles: ['USER', 'ADMIN'] },
-    { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} />, roles: ['USER', 'ADMIN', 'MANAGER'] },
-    { path: '/availability', label: 'Availability', icon: <Search size={18} />, roles: ['USER', 'ADMIN', 'MANAGER'] },
+  // ✅ 1. Common Navbar (Visible to Everyone: Guest + All roles)
+  const commonItems = [
+    { path: '/', label: 'Home', icon: <Home size={18} /> },
+    { path: '/resources', label: 'Resources', icon: <Hexagon size={18} /> },
+    { path: '/availability', label: 'Availability', icon: <Activity size={18} /> },
+    { path: '/about', label: 'About', icon: <Info size={18} /> },
   ];
 
-  if (user && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
-    navItems.push({ path: '/admin', label: 'Admin Panel', icon: <Shield size={18} />, roles: ['ADMIN', 'MANAGER'] });
-  }
+  // Role-Specific logic
+  const getRoleItems = () => {
+    if (!user) return []; // Guest handled via "user ?" logic in UI
+
+    switch(user.role) {
+      case 'ADMIN':
+        // ✅ 4. ADMIN Navbar
+        return [
+          { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+        ];
+      case 'MANAGER':
+        // ✅ 5. MANAGER Navbar
+        return [
+          { path: '/admin', label: 'Analytics Dashboard', icon: <LineChart size={18} /> },
+        ];
+      case 'USER':
+      default:
+        // ✅ 3. USER Navbar (Student / Staff)
+        return [
+          { path: '/bookings', label: 'Book Resource', icon: <PlusCircle size={18} /> },
+          { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} /> },
+        ];
+    }
+  };
+
+  const navItems = [...commonItems, ...getRoleItems()];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
@@ -122,12 +152,15 @@ const Navbar = () => {
               </button>
             </div>
           ) : (
-            <Link 
-              to="/login" 
-              className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200"
-            >
-              Partner Sign In
-            </Link>
+            <div className="flex items-center gap-4">
+               {/* ✅ 2. Guest View: Show Login */}
+               <Link 
+                 to="/login" 
+                 className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200"
+               >
+                 Sign In
+               </Link>
+            </div>
           )}
         </div>
       </div>
