@@ -1,10 +1,30 @@
 import React from 'react';
 import { NavLink, Link, useNavigate } from 'react-router-dom';
-import { Layout, PlusCircle, User, Shield, Search, Home, BarChart3, LogOut, UserCircle } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { 
+  Layout, 
+  PlusCircle, 
+  User, 
+  Shield, 
+  Search, 
+  Home, 
+  LogOut, 
+  UserCircle,
+  Bell,
+  Settings,
+  BarChart3
+} from 'lucide-react';
 
 const Navbar = () => {
+  const [isScrolled, setIsScrolled] = React.useState(false);
   const user = JSON.parse(localStorage.getItem('user'));
   const navigate = useNavigate();
+
+  React.useEffect(() => {
+    const handleScroll = () => setIsScrolled(window.scrollY > 20);
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handleLogout = () => {
     localStorage.removeItem('user');
@@ -20,63 +40,93 @@ const Navbar = () => {
     { path: '/availability', label: 'Availability', icon: <Search size={18} />, roles: ['USER', 'ADMIN', 'MANAGER'] },
   ];
 
-  // Admin Dashboard only for ADMIN and MANAGER
   if (user && (user.role === 'ADMIN' || user.role === 'MANAGER')) {
-    navItems.push({ path: '/admin', label: 'Admin', icon: <Shield size={18} />, roles: ['ADMIN', 'MANAGER'] });
+    navItems.push({ path: '/admin', label: 'Admin Panel', icon: <Shield size={18} />, roles: ['ADMIN', 'MANAGER'] });
   }
 
   return (
-    <nav className="sticky top-0 z-50 bg-white/70 backdrop-blur-xl border-b border-slate-100">
-      <div className="max-w-7xl mx-auto px-4 h-20 flex items-center justify-between">
-        <Link to="/" className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center text-white shadow-lg shadow-indigo-100 group-hover:rotate-12 transition-transform">
-            <Layout size={24} />
+    <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
+      <div className="max-w-[1440px] mx-auto px-6 h-24 flex items-center justify-between">
+        {/* Logo */}
+        <Link to="/" className="flex items-center gap-4 group">
+          <motion.div 
+            whileHover={{ scale: 1.05, rotate: 5 }}
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all shadow-2xl bg-indigo-600 shadow-indigo-200"
+          >
+            <Layout size={28} />
+          </motion.div>
+          <div className="flex flex-col">
+            <span className="text-2xl font-black tracking-tight leading-none transition-colors text-slate-800">SmartCampus</span>
+            <span className="text-[10px] font-bold uppercase tracking-[0.2em] transition-colors text-indigo-500">Excellence Portal</span>
           </div>
-          <span className="text-xl font-black tracking-tight text-slate-800 hidden sm:inline">SmartCampus</span>
         </Link>
         
-        <div className="hidden lg:flex items-center gap-1">
+        {/* Main Nav */}
+        <div className="hidden lg:flex items-center gap-2 p-1.5 rounded-2xl border transition-all bg-slate-900/5 border-slate-900/5">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) => `
-                flex items-center gap-2 px-4 py-2.5 rounded-xl font-bold transition-all text-sm
+                relative flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm overflow-hidden group
                 ${isActive 
-                  ? 'bg-indigo-50 text-indigo-700 shadow-sm border border-indigo-100' 
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
+                  ? 'bg-white text-indigo-700 shadow-sm'
+                  : 'text-slate-500 hover:text-slate-900'
                 }
               `}
             >
               {item.icon}
               {item.label}
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 transition-all group-[.active]:opacity-100 bg-indigo-600" />
             </NavLink>
           ))}
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* User Actions */}
+        <div className="flex items-center gap-4">
+          <div className="hidden sm:flex items-center gap-2 mr-2">
+            <button className="p-3 transition-all rounded-xl border border-transparent text-slate-400 hover:text-indigo-600 hover:bg-white hover:border-slate-100">
+              <Bell size={20} />
+            </button>
+            <button className="p-3 transition-all rounded-xl border border-transparent text-slate-400 hover:text-indigo-600 hover:bg-white hover:border-slate-100">
+              <Settings size={20} />
+            </button>
+          </div>
+
           {user ? (
-            <div className="flex items-center gap-3 bg-slate-50 p-1.5 pr-4 rounded-2xl border border-slate-100">
-              <div className={`p-2 rounded-xl text-white shadow-sm ${
-                user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-500'
-              }`}>
-                <UserCircle size={20} />
-              </div>
+            <div className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl border transition-all bg-white border-slate-100 shadow-sm">
+              <motion.div 
+                whileHover={{ rotate: 5 }}
+                className={`p-2.5 rounded-xl text-white shadow-lg ${
+                  user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-600'
+                }`}
+              >
+                <UserCircle size={22} />
+              </motion.div>
               <div className="hidden sm:block">
-                <div className="text-xs font-black text-slate-900 leading-none">{user.username}</div>
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{user.role}</div>
+                <div className="text-sm font-black leading-none mb-1 transition-colors text-slate-900">{user.username}</div>
+                <div className="flex items-center gap-1.5">
+                   <div className={`w-1.5 h-1.5 rounded-full ${
+                    user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-500'
+                   }`} />
+                   <span className="text-[10px] font-black uppercase tracking-widest transition-colors text-slate-400">{user.role}</span>
+                </div>
               </div>
+              <div className="h-8 w-px mx-2 transition-colors bg-slate-100" />
               <button 
                 onClick={handleLogout}
-                className="ml-2 p-1.5 text-slate-400 hover:text-rose-600 transition-colors"
+                className="p-2 transition-colors text-slate-400 hover:text-rose-600"
                 title="Logout"
               >
-                <LogOut size={18} />
+                <LogOut size={20} />
               </button>
             </div>
           ) : (
-            <Link to="/login" className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm hover:bg-slate-800 shadow-xl shadow-slate-200 transition-all flex items-center gap-2">
-              Sign In
+            <Link 
+              to="/login" 
+              className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200"
+            >
+              Partner Sign In
             </Link>
           )}
         </div>

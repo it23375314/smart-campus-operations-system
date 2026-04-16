@@ -1,13 +1,79 @@
-@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Serif+Display&display=swap');
 
-@layer base {
-  body {
-    @apply bg-slate-50 text-slate-900 antialiased;
-  }
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --prestige-indigo: #4f46e5;
+  --prestige-slate: #0f172a;
 }
 
-@layer components {
-  .glass-card {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
-  }
+body {
+  @apply antialiased text-slate-900 overflow-x-hidden transition-colors duration-500 bg-white;
+  font-family: 'Inter', sans-serif;
+}
+
+h1, h2, h3, .font-prestige {
+  font-family: 'DM Serif Display', serif;
+}
+
+/* 🎞️ Local SVG Noise Filter (No external dependencies) */
+.grain-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0.035;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* 💎 Prestige Glass */
+.glass-heavy {
+  @apply backdrop-blur-3xl border border-white/20 shadow-2xl;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.glass-dark {
+  @apply backdrop-blur-3xl border border-white/10 shadow-2xl;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+/* ✨ Premium Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-indigo-300 transition-colors;
+}
+
+/* 🏎️ Fast Scroll Snap */
+.horizontal-scroll-container {
+  @apply flex overflow-x-auto gap-12 pb-20 px-6 snap-x snap-mandatory;
+  scrollbar-width: none;
+}
+
+.horizontal-scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.snap-item {
+  @apply snap-center shrink-0;
+}
+
+/* 🖋️ Editorial Typography Utilities */
+.tracking-prestige {
+  letter-spacing: -0.05em;
+}
+
+.leading-prestige {
+  line-height: 0.85;
 }
