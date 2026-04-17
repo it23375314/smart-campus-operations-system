@@ -22,7 +22,7 @@ export default function CreateIncident() {
     };
 
     // Send the data to your Java backend
-    fetch('http://localhost:8081/api/incidents', {
+    fetch('http://localhost:8087/api/incidents', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

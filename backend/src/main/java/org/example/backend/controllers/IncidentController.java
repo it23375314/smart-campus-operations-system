@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/incidents")
-@CrossOrigin(origins = "http://localhost:5173") // This allows your React frontend to connect!
+@CrossOrigin(origins = {"http://localhost:5173", "http://localhost:5174"}) // This allows both React frontend ports
 public class IncidentController {
 
     @Autowired

@@ -7,7 +7,7 @@ const AdminDashboard = () => {
 
   // useEffect fetches the real data from your Spring Boot backend when the page loads
   useEffect(() => {
-    fetch('http://localhost:8081/api/incidents')
+    fetch('http://localhost:8087/api/incidents')
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');

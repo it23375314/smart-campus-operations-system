@@ -1,31 +1,28 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
 const MyIncidents = () => {
-  // Mock data to test the UI. Later, you will fetch this from Spring Boot / MongoDB.
-  const [incidents, setIncidents] = useState([
-    {
-      id: "INC-001",
-      title: "Broken Projector in Room 402",
-      date: "2026-04-05",
-      status: "Pending",
-      description: "The projector won't turn on, and the power cable seems frayed.",
-    },
-    {
-      id: "INC-002",
-      title: "AC leaking in Library",
-      date: "2026-04-01",
-      status: "In Progress",
-      description: "Water is dripping heavily near the Computer Science book section.",
-    },
-    {
-      id: "INC-003",
-      title: "Wi-Fi down in Cafe",
-      date: "2026-03-28",
-      status: "Resolved",
-      description: "Cannot connect to the student network in the left wing of the cafe.",
-    }
-  ]);
+  // Start with an empty array. No more fake data!
+  const [incidents, setIncidents] = useState([]);
+
+  // Fetch real data from your Spring Boot backend when the page loads
+  useEffect(() => {
+    fetch('http://localhost:8087/api/incidents')
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        // Since this is "My Incidents", we only show tickets submitted by this user
+        const myTickets = data.filter(ticket => ticket.reportedBy === "Student User");
+        setIncidents(myTickets);
+      })
+      .catch(error => {
+        console.error("Error fetching incidents:", error);
+      });
+  }, []);
 
   // A helper function to change Tailwind colors based on the ticket status
   const getStatusBadge = (status) => {
@@ -85,7 +82,7 @@ const MyIncidents = () => {
                       </div>
                       <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
                         <p>
-                          Reported on <time dateTime={incident.date} className="font-medium">{incident.date}</time>
+                          Reported on <time dateTime={incident.dateReported} className="font-medium">{incident.dateReported}</time>
                         </p>
                       </div>
                     </div>
