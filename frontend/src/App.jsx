@@ -11,6 +11,10 @@ import AboutPage from './pages/AboutPage';
 import ResourcesPage from './pages/ResourcesPage';
 import LoginPage from './pages/LoginPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import AdminLayout from './layouts/AdminLayout';
+import ResourceList from './pages/admin/ResourceList';
+import ResourceForm from './pages/admin/ResourceForm';
+import ResourceDetails from './pages/admin/ResourceDetails';
 
 function App() {
   return (
@@ -47,12 +51,21 @@ function App() {
               </ProtectedRoute>
             } />
             
-            {/* Admin & Intelligence Centers: Strict Access */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
-                <AdminDashboard />
-              </ProtectedRoute>
-            } />
+            {/* Admin panel: sidebar layout wraps all /admin/* routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<AdminDashboard />} />
+              <Route path="resources" element={<ResourceList />} />
+              <Route path="resources/add" element={<ResourceForm />} />
+              <Route path="resources/edit/:id" element={<ResourceForm />} />
+              <Route path="resources/view/:id" element={<ResourceDetails />} />
+            </Route>
           </Routes>
         </main>
       </div>
