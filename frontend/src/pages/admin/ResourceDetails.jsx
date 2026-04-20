@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/resources';
+const API_BASE = 'http://localhost:8085/api/resources';
 
 const StatusIcon = ({ status }) => {
   const config = {

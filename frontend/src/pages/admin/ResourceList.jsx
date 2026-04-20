@@ -15,7 +15,7 @@ import {
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/resources';
+const API_BASE = 'http://localhost:8085/api/resources';
 
 const MOCK_RESOURCES = [
   {

@@ -25,53 +25,12 @@ const AdminLayout = () => {
 
   return (
     <div className="flex min-h-screen bg-slate-50">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white border-r border-slate-200 fixed h-full z-20 flex flex-col shadow-sm">
-        {/* Logo */}
-        <div className="p-6 flex items-center gap-3 border-b border-slate-100">
-          <div className="w-10 h-10 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/30"
-               style={{ background: 'linear-gradient(135deg, #4f46e5, #6d28d9)' }}>
-            <Building2 size={20} />
-          </div>
-          <div>
-            <h1 className="font-bold text-slate-800 text-sm leading-tight">Smart Campus</h1>
-            <p className="text-[10px] text-slate-400 uppercase tracking-widest font-semibold">Admin Panel</p>
-          </div>
-        </div>
-
-        {/* Nav */}
-        <nav className="mt-6 px-4 space-y-1 flex-1">
-          <NavItem to="/admin" icon={<LayoutDashboard size={18} />} label="Overview" exact />
-          <NavItem to="/admin/resources" icon={<Package size={18} />} label="Resources" />
-          <NavItem to="/admin/calendar" icon={<Calendar size={18} />} label="Schedule" disabled />
-          <NavItem to="/admin/settings" icon={<Settings size={18} />} label="Settings" disabled />
-        </nav>
-
-        {/* User footer */}
-        <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 mb-3">
-            <div className="w-9 h-9 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold text-sm shrink-0">
-              AD
-            </div>
-            <div className="overflow-hidden">
-              <p className="text-sm font-semibold text-slate-800 truncate">Campus Admin</p>
-              <p className="text-xs text-slate-400 truncate">admin@smartcampus.edu</p>
-            </div>
-          </div>
-          <Link
-            to="/"
-            className="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:text-red-500 hover:bg-red-50 w-full rounded-xl transition-all duration-200 text-sm font-medium"
-          >
-            <LogOut size={17} />
-            Back to Site
-          </Link>
-        </div>
-      </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 min-h-screen">
+      <main className="flex-1 min-h-screen pt-32 max-w-7xl mx-auto w-full">
+
         {/* Top header bar */}
-        <header className="sticky top-0 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center">
+        <header className="sticky top-32 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center rounded-2xl mx-4 mt-4 shadow-sm">
           <div>
             <nav className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-0.5">
               <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>

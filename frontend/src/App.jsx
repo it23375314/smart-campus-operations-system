@@ -1,11 +1,11 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import BookingFormPage from './pages/BookingFormPage';
 import MyBookingsPage from './pages/MyBookingsPage';
-import AdminDashboard from './pages/AdminDashboard';
+
 import AvailabilityView from './pages/AvailabilityView';
 import AboutPage from './pages/AboutPage';
 import ResourcesPage from './pages/ResourcesPage';
@@ -60,7 +60,7 @@ function App() {
                 </ProtectedRoute>
               }
             >
-              <Route index element={<AdminDashboard />} />
+              <Route index element={<Navigate to="resources" replace />} />
               <Route path="resources" element={<ResourceList />} />
               <Route path="resources/add" element={<ResourceForm />} />
               <Route path="resources/edit/:id" element={<ResourceForm />} />

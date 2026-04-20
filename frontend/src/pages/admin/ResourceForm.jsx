@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Upload, Save, Loader2 } from 'lucide-react';
 import axios from 'axios';
 
-const API_BASE = 'http://localhost:8080/api/resources';
+const API_BASE = 'http://localhost:8085/api/resources';
 
 const CATEGORIES = ['Auditorium', 'Laboratory', 'Equipment', 'Classroom', 'Sports', 'Other'];
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
