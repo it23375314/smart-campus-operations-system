@@ -2,9 +2,12 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
 import MyIncidents from './pages/tickets/MyIncidents';
-import CreateIncident from './pages/tickets/CreateIncident'; // Adjust path if needed
+import CreateIncident from './pages/tickets/CreateIncident'; 
 import AdminDashboard from './pages/tickets/AdminDashboard';
-import UpdateIncident from './pages/tickets/UpdateIncident'
+import UpdateIncident from './pages/tickets/UpdateIncident';
+import TechnicianManagement from './pages/tickets/TechnicianManagement';
+import IncidentDetails from './pages/tickets/IncidentDetails';
+
 function App() {
   return (
     <Router>
@@ -17,6 +20,8 @@ function App() {
         <Route path="/create" element={<CreateIncident />} />
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/update/:id" element={<UpdateIncident />} />
+        <Route path="/technicians" element={<TechnicianManagement />} />
+        <Route path="/incident/:id" element={<IncidentDetails />} /> {/* NEW ROUTE ADDED HERE */}
       </Routes>
     </Router>
   );
