@@ -6,6 +6,7 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface IncidentRepository extends MongoRepository<Incident, String> {
+    boolean existsByReferenceId(String referenceId);
     
     // Spring Boot automatically gives us save(), findAll(), findById(), etc.
     // We can add custom searches here later if we need to!

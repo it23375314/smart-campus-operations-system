@@ -7,6 +7,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.SecureRandom;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -17,21 +18,66 @@ import java.util.HashMap;
 @CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" }) // This allows both React frontend ports
 public class IncidentController {
 
+    private static final String REFERENCE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    private static final SecureRandom RANDOM = new SecureRandom();
+
     @Autowired
     private IncidentRepository incidentRepository;
 
     // 1. Create a new incident (For standard users / Create Incident Page)
     @PostMapping
     public Incident createIncident(@RequestBody Incident incident) {
+        if (incident.getReferenceId() == null || incident.getReferenceId().isBlank()) {
+            incident.setReferenceId(generateUniqueReferenceId());
+        }
         incident.setDateReported(LocalDate.now());
         incident.setStatus("Pending"); // Every new ticket starts as Pending
         return incidentRepository.save(incident);
     }
 
+    private String generateUniqueReferenceId() {
+        String referenceId;
+        do {
+            referenceId = generateReferenceId();
+        } while (incidentRepository.existsByReferenceId(referenceId));
+        return referenceId;
+    }
+
+    private String generateReferenceId() {
+        return String.format(
+            "%s-%04d-%s",
+            randomLetters(4),
+            RANDOM.nextInt(10_000),
+            randomLetters(4)
+        );
+    }
+
+    private String randomLetters(int length) {
+        StringBuilder builder = new StringBuilder(length);
+        for (int index = 0; index < length; index++) {
+            builder.append(REFERENCE_ALPHABET.charAt(RANDOM.nextInt(REFERENCE_ALPHABET.length())));
+        }
+        return builder.toString();
+    }
+
     // 2. Get ALL incidents (For the Admin Dashboard)
     @GetMapping
     public List<Incident> getAllIncidents() {
-        return incidentRepository.findAll(); // Fetches everything from MongoDB
+        List<Incident> incidents = incidentRepository.findAll(); // Fetches everything from MongoDB
+
+        // Backfill reference IDs for legacy records
+        boolean changed = false;
+        for (Incident incident : incidents) {
+            if (incident.getReferenceId() == null || incident.getReferenceId().isBlank()) {
+                incident.setReferenceId(generateUniqueReferenceId());
+                changed = true;
+            }
+        }
+        if (changed) {
+            incidentRepository.saveAll(incidents);
+        }
+
+        return incidents;
     }
 
     // 3. Get a single incident by ID (For the Update Page)
@@ -48,8 +94,14 @@ public class IncidentController {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
             }
             
-            System.out.println("Incident found: " + incident.get().getId());
-            return ResponseEntity.ok(incident.get());
+            Incident found = incident.get();
+            if (found.getReferenceId() == null || found.getReferenceId().isBlank()) {
+                found.setReferenceId(generateUniqueReferenceId());
+                found = incidentRepository.save(found);
+            }
+
+            System.out.println("Incident found: " + found.getId());
+            return ResponseEntity.ok(found);
         } catch (Exception e) {
             System.err.println("Error fetching incident: " + e.getMessage());
             e.printStackTrace();

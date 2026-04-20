@@ -6,6 +6,8 @@ const stripHtmlToText = (value) => {
   return String(value).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
 };
 
+const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
+
 const UpdateIncident = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -22,6 +24,7 @@ const UpdateIncident = () => {
   const [status, setStatus] = useState('Pending');
   const [selectedTechId, setSelectedTechId] = useState('');
   const [newRemark, setNewRemark] = useState('');
+  const [urgent, setUrgent] = useState(false);
 
   const proofUrls = Array.isArray(incident?.proofUrls) && incident.proofUrls.length > 0
     ? incident.proofUrls
@@ -33,7 +36,7 @@ const UpdateIncident = () => {
     const loadData = async () => {
       try {
         setIsLoading(true); setLoadError('');
-        const incidentResponse = await fetch(`http://localhost:8087/api/incidents/${id}`);
+        const incidentResponse = await fetch(`/api/incidents/${id}`);
 
         if (!incidentResponse.ok) throw new Error('Failed to load ticket details');
 
@@ -42,9 +45,10 @@ const UpdateIncident = () => {
 
         setIncident(incidentData);
         setStatus(incidentData.status || 'Pending');
+        setUrgent(incidentData.urgent || false);
         if (incidentData.assignedTechnicianId) setSelectedTechId(incidentData.assignedTechnicianId);
 
-        const techniciansResponse = await fetch('http://localhost:8087/api/technicians');
+        const techniciansResponse = await fetch('/api/technicians');
         if (techniciansResponse.ok) {
           const technicianData = await techniciansResponse.json();
           setTechnicians(technicianData);
@@ -64,6 +68,7 @@ const UpdateIncident = () => {
     
     const updatePayload = {
       status: status,
+      urgent: urgent,
       assignedTechnicianId: assignedTech ? assignedTech.id : null,
       assignedTechnicianName: assignedTech ? assignedTech.name : null,
       assignedTechnicianCategory: assignedTech ? assignedTech.category : null,
@@ -71,7 +76,7 @@ const UpdateIncident = () => {
     };
 
     try {
-      const response = await fetch(`http://localhost:8087/api/incidents/${id}`, {
+      const response = await fetch(`/api/incidents/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(updatePayload),
@@ -96,30 +101,41 @@ const UpdateIncident = () => {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-extrabold text-gray-900">Manage Ticket</h1>
-            <p className="mt-1 text-sm text-gray-500 font-mono">ID: {id}</p>
+            <p className="mt-1 text-sm text-gray-500 font-mono">Reference ID: {getIncidentReference(incident)}</p>
           </div>
           <Link to="/admin" className="text-gray-600 hover:text-gray-900 font-medium bg-white border border-gray-300 py-2 px-4 rounded-md shadow-sm transition">
             &larr; Back to Dashboard
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Left Column: Original Issue Details */}
-          <div className="md:col-span-1 bg-white shadow rounded-lg p-6 border border-gray-200 h-fit">
-            <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Original Report</h2>
-            <div className="space-y-4">
+          <div className="bg-white shadow rounded-lg p-6 border border-gray-200">
+            <h2 className="text-lg font-bold text-gray-800 border-b pb-3 mb-6">Original Report</h2>
+            <div className="space-y-5">
               <div>
-                <span className="block text-sm font-medium text-gray-500">Title</span>
-                <span className="block text-gray-900 font-semibold">{incident.title}</span>
+                <span className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1">Ticket Title</span>
+                <span className="block text-base text-gray-900 font-bold">{incident.title}</span>
               </div>
               <div>
-                <span className="block text-sm font-medium text-gray-500">Description</span>
-                <p className="mt-1 text-sm text-gray-700 bg-gray-50 p-3 rounded border border-gray-100">{stripHtmlToText(incident.description)}</p>
+                <span className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Reporter Details</span>
+                <div className="bg-gray-50 p-3 rounded border border-gray-200 text-sm space-y-2">
+                  <p><span className="font-medium text-gray-700">Name:</span> {incident.reportedBy}</p>
+                  <p><span className="font-medium text-gray-700">Email:</span> {incident.email}</p>
+                  <p><span className="font-medium text-gray-700">Phone:</span> {incident.contactNumber}</p>
+                  <p><span className="font-medium text-gray-700">Reg No:</span> {incident.registrationNumber}</p>
+                  <p><span className="font-medium text-gray-700">Faculty:</span> {incident.faculty}</p>
+                  <p><span className="font-medium text-gray-700">Campus:</span> {incident.campus}</p>
+                </div>
+              </div>
+              <div>
+                <span className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Full Description</span>
+                <p className="text-sm text-gray-800 bg-gray-50 p-4 rounded border border-gray-200 leading-relaxed">{stripHtmlToText(incident.description)}</p>
               </div>
 
               {/* CLEAN PROOF GRID */}
               <div>
-                <span className="block text-sm font-medium text-gray-500 mb-2">Attached Proof</span>
+                <span className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Attached Proof</span>
                 {proofUrls.length > 0 ? (
                   <div className="grid grid-cols-3 gap-2">
                     {proofUrls.map((proofUrl, index) => (
@@ -148,7 +164,7 @@ const UpdateIncident = () => {
               {/* Remarks History */}
               {incident.remarksHistory && incident.remarksHistory.length > 0 && (
                 <div>
-                  <span className="block text-sm font-medium text-gray-500 mt-4 mb-2">Remarks History</span>
+                  <span className="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2">Remarks History</span>
                   <ul className="text-sm text-gray-600 space-y-2 bg-blue-50 p-3 rounded border border-blue-100">
                     {incident.remarksHistory.map((remark, idx) => (
                       <li key={idx} className="border-b border-blue-200 pb-1 last:border-0">{remark}</li>
@@ -160,7 +176,7 @@ const UpdateIncident = () => {
           </div>
 
           {/* Right Column: Update Form */}
-          <div className="md:col-span-2 bg-white shadow rounded-lg p-6 border border-gray-200">
+          <div className="bg-white shadow rounded-lg p-6 border border-gray-200">
              <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Technician Actions & Assignment</h2>
              <form onSubmit={handleUpdate}>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -170,6 +186,7 @@ const UpdateIncident = () => {
                       <option value="Pending">Pending</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Resolved">Resolved</option>
+                      <option value="Closed">Closed</option>
                     </select>
                   </div>
                   <div>
@@ -181,6 +198,20 @@ const UpdateIncident = () => {
                       ))}
                     </select>
                   </div>
+                </div>
+
+                {/* Urgent Flag Toggle */}
+                <div className="mb-6 flex items-center gap-3 p-3 bg-red-50 border border-red-200 rounded-md">
+                  <input
+                    type="checkbox"
+                    id="adminUrgent"
+                    checked={urgent}
+                    onChange={(e) => setUrgent(e.target.checked)}
+                    className="h-4 w-4 rounded border-gray-300 text-red-600 focus:ring-red-500 cursor-pointer"
+                  />
+                  <label htmlFor="adminUrgent" className="text-sm font-medium text-gray-700 cursor-pointer flex items-center gap-2">
+                    🚨 Mark as Urgent Priority
+                  </label>
                 </div>
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">Add New Remark</label>

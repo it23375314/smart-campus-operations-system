@@ -11,6 +11,8 @@ public class Incident {
 
     @Id
     private String id;
+
+    private String referenceId;
     
     // NEW SLIIT FORM FIELDS
     private String reportedBy; // Maps to "Name"
@@ -24,6 +26,7 @@ public class Incident {
     
     private LocalDate dateReported;
     private String status; // Pending, In Progress, Resolved
+    private Boolean urgent = false; // Default: not urgent
 
     private List<String> proofUrls = new ArrayList<>();
 
@@ -38,6 +41,9 @@ public class Incident {
     // --- GETTERS AND SETTERS ---
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
+
+    public String getReferenceId() { return referenceId; }
+    public void setReferenceId(String referenceId) { this.referenceId = referenceId; }
 
     public String getReportedBy() { return reportedBy; }
     public void setReportedBy(String reportedBy) { this.reportedBy = reportedBy; }
@@ -68,6 +74,9 @@ public class Incident {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public Boolean getUrgent() { return urgent != null ? urgent : false; }
+    public void setUrgent(Boolean urgent) { this.urgent = urgent; }
 
     public List<String> getProofUrls() { return proofUrls; }
     public void setProofUrls(List<String> proofUrls) { this.proofUrls = proofUrls; }

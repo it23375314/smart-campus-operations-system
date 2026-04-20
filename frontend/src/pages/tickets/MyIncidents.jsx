@@ -8,13 +8,15 @@ const stripHtmlToText = (value) => {
 
 const safeLower = (value) => String(value ?? '').toLowerCase();
 
+const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
+
 const MyIncidents = () => {
   const [incidents, setIncidents] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('All');
 
   useEffect(() => {
-    fetch('http://localhost:8087/api/incidents')
+    fetch('/api/incidents')
       .then(res => res.json())
       .then(data => {
         const incidentsArray = Array.isArray(data) ? data : [];
@@ -61,7 +63,8 @@ const MyIncidents = () => {
   const filteredIncidents = incidents.filter(incident => {
     const search = safeLower(searchTerm);
     const matchesSearch = safeLower(incident?.title).includes(search) || 
-                          safeLower(incident?.id).includes(search);
+                          safeLower(incident?.id).includes(search) ||
+                          safeLower(incident?.referenceId).includes(search);
     const matchesStatus = filterStatus === 'All' || incident.status === filterStatus;
     return matchesSearch && matchesStatus;
   });
@@ -112,18 +115,25 @@ const MyIncidents = () => {
           <ul className="divide-y divide-gray-200">
             {filteredIncidents.length > 0 ? (
               filteredIncidents.map((incident) => (
-                <li key={incident.id} className="p-6 hover:bg-gray-50 transition duration-150">
+                <li key={incident.id} className={`p-6 hover:bg-gray-50 transition duration-150 ${incident.urgent ? 'border-l-4 border-red-500' : ''}`}>
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-2">
                         <p className="text-lg font-semibold text-gray-900 truncate">{incident.title}</p>
-                        <p className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusBadge(incident.status)}`}>
-                          {incident.status}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          {incident.urgent && (
+                            <span className="inline-flex items-center text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded border border-red-200">
+                              🚨 URGENT
+                            </span>
+                          )}
+                          <p className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusBadge(incident.status)}`}>
+                            {incident.status}
+                          </p>
+                        </div>
                       </div>
                       <p className="mt-2 text-sm text-gray-600 line-clamp-2">{stripHtmlToText(incident.description)}</p>
                       <div className="mt-3 flex justify-between items-center text-xs text-gray-500">
-                        <span className="font-mono bg-gray-100 px-2 py-1 rounded">ID: {String(incident?.id ?? '').substring(0, 8) || '—'}</span>
+                        <span className="font-mono bg-gray-100 px-2 py-1 rounded">Ref: {getIncidentReference(incident)}</span>
                         <span>Reported on: <span className="font-medium">{incident.dateReported}</span></span>
                       </div>
                       

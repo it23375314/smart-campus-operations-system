@@ -8,12 +8,20 @@ const AdminDashboard = () => {
   const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
-    fetch('http://localhost:8087/api/incidents')
+    fetch('/api/incidents')
       .then(response => {
         if (!response.ok) throw new Error('Network response was not ok');
         return response.json();
       })
-      .then(data => setAllIncidents(data))
+      .then(data => {
+        // Sort by dateReported newest first
+        const sorted = [...data].sort((a, b) => {
+          const dateA = new Date(a.dateReported);
+          const dateB = new Date(b.dateReported);
+          return dateB - dateA; // Newest first
+        });
+        setAllIncidents(sorted);
+      })
       .catch(error => console.error("Error fetching incidents:", error));
   }, []);
 
@@ -35,6 +43,8 @@ const AdminDashboard = () => {
     if (incident.proofImageUrl) return [incident.proofImageUrl];
     return [];
   };
+
+  const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8 relative">
@@ -80,6 +90,7 @@ const AdminDashboard = () => {
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket ID</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proof</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
@@ -88,12 +99,17 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {allIncidents.length === 0 ? (
-                  <tr><td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">No incidents found.</td></tr>
+                  <tr><td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">No incidents found.</td></tr>
                 ) : (
                   allIncidents.map((incident) => (
-                    <tr key={incident.id} className="hover:bg-gray-50 transition duration-150">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{incident.id.substring(0, 8)}...</td>
+                    <tr key={incident.id} className={`hover:bg-gray-50 transition duration-150 ${incident.urgent ? 'bg-red-50' : ''}`}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getIncidentReference(incident)}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{incident.title}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-block font-bold text-xs px-2 py-1 rounded ${incident.urgent ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>
+                          {incident.urgent ? '🚨 URGENT' : 'Normal'}
+                        </span>
+                      </td>
                       <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px]">
                         {getProofUrls(incident).length > 0 ? (
                           <div className="flex flex-wrap gap-2">

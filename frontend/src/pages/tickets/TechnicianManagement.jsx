@@ -8,7 +8,7 @@ const TechnicianManagement = () => {
   const [category, setCategory] = useState('IT Support');
 
   const fetchTechnicians = () => {
-    fetch('http://localhost:8087/api/technicians')
+    fetch('/api/technicians')
       .then(res => res.json())
       .then(data => setTechnicians(data))
       .catch(err => console.error(err));
@@ -23,7 +23,7 @@ const TechnicianManagement = () => {
     const newTech = { name, email, category };
 
     try {
-      const response = await fetch('http://localhost:8087/api/technicians', {
+      const response = await fetch('/api/technicians', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newTech),
@@ -40,7 +40,7 @@ const TechnicianManagement = () => {
   const handleDelete = async (id) => {
     if(!window.confirm("Are you sure you want to remove this technician?")) return;
     try {
-      await fetch(`http://localhost:8087/api/technicians/${id}`, { method: 'DELETE' });
+      await fetch(`/api/technicians/${id}`, { method: 'DELETE' });
       fetchTechnicians();
     } catch (error) {
       console.error("Error deleting:", error);
