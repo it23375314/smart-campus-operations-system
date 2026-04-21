@@ -33,3 +33,4 @@ export const markAllAsRead = () => API.put('/notifications/read-all');
 export const deleteNotification = (id) => API.delete(`/notifications/${id}`);
 
 export default API;
+export const createUser = (data, role) => API.post(`/auth/admin/create-user?role=${role}`, data);

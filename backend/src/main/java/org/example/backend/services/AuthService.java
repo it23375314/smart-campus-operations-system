@@ -73,4 +73,28 @@ public class AuthService {
                 user.getRole().name()
         );
     }
+
+    public AuthResponse createUser(RegisterRequest request, String role) {
+    if (userRepository.existsByEmail(request.getEmail())) {
+        throw new RuntimeException("Email already registered");
+    }
+
+    User user = new User(
+            request.getName(),
+            request.getEmail(),
+            passwordEncoder.encode(request.getPassword()),
+            Role.valueOf(role.toUpperCase())
+    );
+
+    User savedUser = userRepository.save(user);
+    String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole().name());
+
+    return new AuthResponse(
+            token,
+            savedUser.getId(),
+            savedUser.getName(),
+            savedUser.getEmail(),
+            savedUser.getRole().name()
+    );
+}
 }

@@ -1,13 +1,17 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { getAllUsers, updateUserRole, deleteUser, deactivateUser } from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import { getAllUsers, updateUserRole, deleteUser, deactivateUser, createUser } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const UserManagement = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [showAddForm, setShowAddForm] = useState(false);
+    const [newUser, setNewUser] = useState({ name: '', email: '', password: '', role: 'USER' });
+    const [addLoading, setAddLoading] = useState(false);
     const { logout } = useAuth();
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchUsers();
@@ -56,6 +60,30 @@ const UserManagement = () => {
         }
     };
 
+    const handleAddUser = async (e) => {
+        e.preventDefault();
+        setAddLoading(true);
+        try {
+            await createUser(
+                { name: newUser.name, email: newUser.email, password: newUser.password },
+                newUser.role
+            );
+            toast.success('User created successfully!');
+            setNewUser({ name: '', email: '', password: '', role: 'USER' });
+            setShowAddForm(false);
+            fetchUsers();
+        } catch (err) {
+            toast.error(err.response?.data?.error || 'Failed to create user');
+        } finally {
+            setAddLoading(false);
+        }
+    };
+
+    const handleLogout = () => {
+        logout();
+        navigate('/login');
+    };
+
     const getRoleBadgeColor = (role) => {
         switch (role) {
             case 'ADMIN': return 'bg-red-100 text-red-700';
@@ -77,7 +105,7 @@ const UserManagement = () => {
                         🔔 Notifications
                     </Link>
                     <button
-                        onClick={() => { logout(); }}
+                        onClick={handleLogout}
                         className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
                     >
                         Logout
@@ -86,13 +114,87 @@ const UserManagement = () => {
             </nav>
 
             <div className="max-w-6xl mx-auto p-6">
+                {/* Header */}
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-bold text-gray-800">👥 User Management</h2>
-                    <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
-                        {users.length} Users
-                    </span>
+                    <div className="flex items-center gap-3">
+                        <span className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                            {users.length} Users
+                        </span>
+                        <button
+                            onClick={() => setShowAddForm(!showAddForm)}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition"
+                        >
+                            {showAddForm ? 'Cancel' : '+ Add User'}
+                        </button>
+                    </div>
                 </div>
 
+                {/* Add User Form */}
+                {showAddForm && (
+                    <div className="bg-white rounded-2xl shadow p-6 mb-6">
+                        <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New User</h3>
+                        <form onSubmit={handleAddUser} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
+                                <input
+                                    type="text"
+                                    value={newUser.name}
+                                    onChange={(e) => setNewUser({ ...newUser, name: e.target.value })}
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="John Doe"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                                <input
+                                    type="email"
+                                    value={newUser.email}
+                                    onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                                    required
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="john@example.com"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                                <input
+                                    type="password"
+                                    value={newUser.password}
+                                    onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                                    required
+                                    minLength={6}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                    placeholder="Min. 6 characters"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                                <select
+                                    value={newUser.role}
+                                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                >
+                                    <option value="USER">USER</option>
+                                    <option value="ADMIN">ADMIN</option>
+                                    <option value="TECHNICIAN">TECHNICIAN</option>
+                                </select>
+                            </div>
+                            <div className="md:col-span-2">
+                                <button
+                                    type="submit"
+                                    disabled={addLoading}
+                                    className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg font-medium transition disabled:opacity-50"
+                                >
+                                    {addLoading ? 'Creating...' : 'Create User'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                )}
+
+                {/* Users Table */}
                 {loading ? (
                     <div className="flex justify-center py-12">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -126,7 +228,6 @@ const UserManagement = () => {
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-2">
-                                                {/* Role Selector */}
                                                 <select
                                                     value={user.role}
                                                     onChange={(e) => handleRoleChange(user.id, e.target.value)}
@@ -136,8 +237,6 @@ const UserManagement = () => {
                                                     <option value="ADMIN">ADMIN</option>
                                                     <option value="TECHNICIAN">TECHNICIAN</option>
                                                 </select>
-
-                                                {/* Deactivate Button */}
                                                 {user.active && (
                                                     <button
                                                         onClick={() => handleDeactivate(user.id)}
@@ -146,8 +245,6 @@ const UserManagement = () => {
                                                         Deactivate
                                                     </button>
                                                 )}
-
-                                                {/* Delete Button */}
                                                 <button
                                                     onClick={() => handleDelete(user.id)}
                                                     className="text-xs bg-red-100 text-red-700 hover:bg-red-200 px-2 py-1 rounded-lg transition"
@@ -160,11 +257,8 @@ const UserManagement = () => {
                                 ))}
                             </tbody>
                         </table>
-
                         {users.length === 0 && (
-                            <div className="text-center py-12 text-gray-500">
-                                No users found
-                            </div>
+                            <div className="text-center py-12 text-gray-500">No users found</div>
                         )}
                     </div>
                 )}

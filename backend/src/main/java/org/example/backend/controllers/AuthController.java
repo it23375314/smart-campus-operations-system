@@ -41,4 +41,16 @@ public class AuthController {
                     .body(Map.of("error", e.getMessage()));
         }
     }
+
+    // POST /api/auth/admin/create-user (Admin creates user with any role)
+@PostMapping("/admin/create-user")
+public ResponseEntity<?> createUser(@Valid @RequestBody RegisterRequest request,
+                                     @RequestParam String role) {
+    try {
+        AuthResponse response = authService.createUser(request, role);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    } catch (RuntimeException e) {
+        return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+    }
+}
 }
