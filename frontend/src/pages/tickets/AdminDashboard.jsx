@@ -1,11 +1,32 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
+const getIncidentCreatedAtMillis = (incident) => {
+  const raw = incident?.createdAt || incident?.dateReported;
+  if (!raw) return 0;
+  const date = new Date(raw);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+};
+
+const formatIncidentCreatedAt = (incident) => {
+  const raw = incident?.createdAt || incident?.dateReported;
+  if (!raw) return '—';
+  const hasTime = Boolean(incident?.createdAt);
+
+  if (!hasTime && typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+
+  return hasTime
+    ? date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+};
+
 const AdminDashboard = () => {
   const [allIncidents, setAllIncidents] = useState([]);
-  
-  // NEW STATE: Tracks which image is currently being viewed in full screen
-  const [selectedImage, setSelectedImage] = useState(null);
 
   useEffect(() => {
     fetch('/api/incidents')
@@ -14,12 +35,8 @@ const AdminDashboard = () => {
         return response.json();
       })
       .then(data => {
-        // Sort by dateReported newest first
-        const sorted = [...data].sort((a, b) => {
-          const dateA = new Date(a.dateReported);
-          const dateB = new Date(b.dateReported);
-          return dateB - dateA; // Newest first
-        });
+        // Sort by createdAt newest first (fallback to dateReported)
+        const sorted = [...data].sort((a, b) => getIncidentCreatedAtMillis(b) - getIncidentCreatedAtMillis(a));
         setAllIncidents(sorted);
       })
       .catch(error => console.error("Error fetching incidents:", error));
@@ -37,12 +54,6 @@ const AdminDashboard = () => {
   const pendingCount = allIncidents.filter(inc => inc.status === 'Pending').length;
   const inProgressCount = allIncidents.filter(inc => inc.status === 'In Progress').length;
   const resolvedCount = allIncidents.filter(inc => inc.status === 'Resolved').length;
-
-  const getProofUrls = (incident) => {
-    if (Array.isArray(incident.proofUrls) && incident.proofUrls.length > 0) return incident.proofUrls;
-    if (incident.proofImageUrl) return [incident.proofImageUrl];
-    return [];
-  };
 
   const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
 
@@ -91,7 +102,6 @@ const AdminDashboard = () => {
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ticket ID</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Issue</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Priority</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Proof</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
                   <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Action</th>
@@ -99,46 +109,23 @@ const AdminDashboard = () => {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {allIncidents.length === 0 ? (
-                  <tr><td colSpan="7" className="px-6 py-4 text-center text-sm text-gray-500">No incidents found.</td></tr>
+                  <tr><td colSpan="6" className="px-6 py-4 text-center text-sm text-gray-500">No incidents found.</td></tr>
                 ) : (
                   allIncidents.map((incident) => (
                     <tr key={incident.id} className={`hover:bg-gray-50 transition duration-150 ${incident.urgent ? 'bg-red-50' : ''}`}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{getIncidentReference(incident)}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{incident.title}</td>
+                      <td
+                        className="px-6 py-4 text-sm text-gray-900 max-w-[420px] truncate"
+                        title={incident.title}
+                      >
+                        {incident.title}
+                      </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`inline-block font-bold text-xs px-2 py-1 rounded ${incident.urgent ? 'bg-red-100 text-red-800' : 'bg-gray-100 text-gray-700'}`}>
                           {incident.urgent ? '🚨 URGENT' : 'Normal'}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-500 max-w-[200px]">
-                        {getProofUrls(incident).length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {getProofUrls(incident).map((proofUrl, index) => (
-                              proofUrl.startsWith('data:image') ? (
-                                <img
-                                  key={`${incident.id}-proof-${index}`}
-                                  src={proofUrl}
-                                  alt={`proof-${index}`}
-                                  onClick={() => setSelectedImage(proofUrl)} // OPENS MODAL
-                                  className="h-10 w-10 rounded border border-gray-300 object-cover cursor-pointer hover:opacity-75 transition-opacity"
-                                  title="Click to enlarge"
-                                />
-                              ) : (
-                                <a
-                                  key={`${incident.id}-proof-${index}`}
-                                  href={proofUrl} target="_blank" rel="noreferrer"
-                                  className="inline-block bg-gray-100 border border-gray-300 rounded px-2 py-1 text-xs text-blue-600 hover:bg-gray-200"
-                                >
-                                  PDF
-                                </a>
-                              )
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-gray-400 italic text-xs">No proof</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{incident.dateReported}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatIncidentCreatedAt(incident)}</td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusBadge(incident.status)}`}>
                           {incident.status}
@@ -158,29 +145,6 @@ const AdminDashboard = () => {
         </div>
 
       </div>
-
-      {/* FULL SCREEN IMAGE MODAL */}
-      {selectedImage && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-80 backdrop-blur-sm p-4 transition-opacity"
-          onClick={() => setSelectedImage(null)} // Close when clicking the background
-        >
-          <div className="relative max-w-4xl w-full max-h-[90vh] flex justify-center">
-            <button 
-              className="absolute -top-10 right-0 text-white text-4xl font-bold hover:text-gray-300 transition"
-              onClick={() => setSelectedImage(null)}
-            >
-              &times;
-            </button>
-            <img 
-              src={selectedImage} 
-              alt="Enlarged Proof" 
-              className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl" 
-              onClick={(e) => e.stopPropagation()} // Prevent closing when clicking the image itself
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 };

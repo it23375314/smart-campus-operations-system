@@ -3,6 +3,7 @@ package org.example.backend.models;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -25,7 +26,9 @@ public class Incident {
     private String description; // Maps to "Message"
     
     private LocalDate dateReported;
+    private LocalDateTime createdAt;
     private String status; // Pending, In Progress, Resolved
+
     private Boolean urgent = false; // Default: not urgent
 
     private List<String> proofUrls = new ArrayList<>();
@@ -71,6 +74,9 @@ public class Incident {
 
     public LocalDate getDateReported() { return dateReported; }
     public void setDateReported(LocalDate dateReported) { this.dateReported = dateReported; }
+
+    public LocalDateTime getCreatedAt() { return createdAt; }
+    public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }

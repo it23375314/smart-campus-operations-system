@@ -1,5 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
+const stripHtmlToText = (value) => {
+  if (!value) return '';
+  return String(value).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+};
 
 const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
 
@@ -7,6 +14,23 @@ const getIncidentReference = (incident) => incident?.referenceId || incident?.id
 const getInitials = (name) => {
   if (!name) return 'U';
   return name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+};
+
+const formatIncidentCreatedAt = (incident) => {
+  const raw = incident?.createdAt || incident?.dateReported;
+  if (!raw) return '—';
+  const hasTime = Boolean(incident?.createdAt);
+
+  if (!hasTime && typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+
+  return hasTime
+    ? date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
 };
 
 const IncidentDetails = () => {
@@ -83,6 +107,97 @@ const IncidentDetails = () => {
     }
   };
 
+  // --- PDF GENERATION FUNCTION ---
+  const handleDownloadPDF = () => {
+    if (!incident) return;
+    const doc = new jsPDF();
+    const ref = getIncidentReference(incident);
+    let currentY = 20;
+
+    // 1. Document Title
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    const splitTitle = doc.splitTextToSize(incident.title, 180);
+    doc.text(splitTitle, 14, currentY);
+    currentY += (splitTitle.length * 6) + 5;
+
+    // 2. Ticket Properties Table (AutoTable)
+    autoTable(doc, {
+      startY: currentY,
+      theme: 'grid',
+      styles: { fontSize: 10, cellPadding: 3, font: 'helvetica' },
+      columnStyles: { 0: { fontStyle: 'bold', fillColor: [245, 245, 245], cellWidth: 50 } },
+      body: [
+        ['Ticket Ref', ref],
+        ['Status', incident.status],
+        ['Created', formatIncidentCreatedAt(incident)],
+        ['User', `${incident.reportedBy} <${incident.email || 'N/A'}>`],
+        ['Agent', incident.assignedTechnicianName || '—'],
+        ['Faculty / School', incident.faculty || '—'],
+        ['Campus/Center', incident.campus || '—'],
+        ['Registration number', incident.registrationNumber || '—'],
+        ['Contact number', incident.contactNumber || '—'],
+      ],
+      didDrawPage: (data) => { currentY = data.cursor.y + 15; }
+    });
+
+    // Helper to check page breaks
+    const checkPageBreak = (neededSpace) => {
+      if (currentY + neededSpace > 280) {
+        doc.addPage();
+        currentY = 20;
+      }
+    };
+
+    // 3. Original Message (#1)
+    checkPageBreak(30);
+    doc.setFontSize(12);
+    doc.setFont("helvetica", "bold");
+    doc.text("Message #1", 14, currentY);
+    currentY += 6;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(`By ${incident.reportedBy} at ${formatIncidentCreatedAt(incident)}`, 14, currentY);
+    currentY += 8;
+
+    const plainDesc = stripHtmlToText(incident.description);
+    const splitDesc = doc.splitTextToSize(plainDesc, 180);
+    doc.text(splitDesc, 14, currentY);
+    currentY += (splitDesc.length * 5) + 15;
+
+    // 4. Threaded Replies
+    if (incident.remarksHistory && incident.remarksHistory.length > 0) {
+      incident.remarksHistory.forEach((remark, index) => {
+        const isStudent = remark.includes('- Student:');
+        const splitRemark = remark.split(': ');
+        const dateAndRole = splitRemark[0]; 
+        const message = splitRemark.slice(1).join(': ');
+        const author = isStudent ? incident.reportedBy : (incident.assignedTechnicianName || 'Agent');
+        const dateStr = dateAndRole.split(' - ')[0];
+
+        const splitMsg = doc.splitTextToSize(message, 180);
+        checkPageBreak((splitMsg.length * 5) + 20);
+
+        doc.setFontSize(12);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Message #${index + 2}`, 14, currentY);
+        currentY += 6;
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.text(`By ${author} at ${dateStr}`, 14, currentY);
+        currentY += 8;
+
+        doc.text(splitMsg, 14, currentY);
+        currentY += (splitMsg.length * 5) + 15;
+      });
+    }
+
+    // Save File
+    doc.save(`Ticket_${ref}.pdf`);
+  };
+
   const proofUrls = Array.isArray(incident?.proofUrls) && incident.proofUrls.length > 0
     ? incident.proofUrls : incident?.proofImageUrl ? [incident.proofImageUrl] : [];
 
@@ -104,8 +219,13 @@ const IncidentDetails = () => {
             </h1>
           </div>
           <div className="flex gap-2">
-            <button className="p-2 bg-white text-gray-500 hover:text-gray-700 rounded shadow-sm border border-gray-200" title="Print">🖨️</button>
-            <button className="p-2 bg-white text-gray-500 hover:text-gray-700 rounded shadow-sm border border-gray-200" title="Download PDF">📄</button>
+            <button 
+              className="p-2 bg-white text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded shadow-sm border border-blue-200 transition font-medium flex items-center gap-2" 
+              title="Download PDF"
+              onClick={handleDownloadPDF}
+            >
+              📄 Download PDF
+            </button>
           </div>
         </div>
 
@@ -130,7 +250,7 @@ const IncidentDetails = () => {
                   </div>
                 </div>
                 <div className="text-xs text-gray-500 font-medium flex items-center gap-1">
-                  ⏱️ {incident.dateReported}
+                  ⏱️ {formatIncidentCreatedAt(incident)}
                 </div>
               </div>
               
@@ -231,14 +351,6 @@ const IncidentDetails = () => {
               ) : (
                 <span className="inline-block bg-yellow-500 text-white font-bold px-4 py-1.5 rounded text-sm w-full text-center">Pending</span>
               )}
-              
-              {/* Urgent Status */}
-              <div className="pt-2 border-t border-gray-100">
-                <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider mb-2">Priority</p>
-                <span className={`inline-block font-bold px-3 py-1 rounded text-xs w-full text-center ${incident.urgent ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-gray-100 text-gray-700 border border-gray-200'}`}>
-                  {incident.urgent ? '🚨 URGENT' : 'Normal'}
-                </span>
-              </div>
 
               {/* Close Ticket Button - Only for Pending status */}
               {incident.status === 'Pending' && (
@@ -258,7 +370,7 @@ const IncidentDetails = () => {
             <div className="bg-white shadow-sm border border-gray-200 p-5 space-y-4 text-sm">
               <div>
                 <span className="block text-xs text-gray-500 mb-1">Created</span>
-                <span className="text-gray-800">{incident.dateReported}</span>
+                <span className="text-gray-800">{formatIncidentCreatedAt(incident)}</span>
               </div>
               <div>
                 <span className="block text-xs text-gray-500 mb-1">Reference</span>

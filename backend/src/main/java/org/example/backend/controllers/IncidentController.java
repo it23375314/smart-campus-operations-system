@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.SecureRandom;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.HashMap;
@@ -30,8 +31,12 @@ public class IncidentController {
         if (incident.getReferenceId() == null || incident.getReferenceId().isBlank()) {
             incident.setReferenceId(generateUniqueReferenceId());
         }
+        if (incident.getCreatedAt() == null) {
+            incident.setCreatedAt(LocalDateTime.now());
+        }
         incident.setDateReported(LocalDate.now());
         incident.setStatus("Pending"); // Every new ticket starts as Pending
+        if (incident.getUrgent() == null) incident.setUrgent(false);
         return incidentRepository.save(incident);
     }
 
@@ -122,6 +127,7 @@ public class IncidentController {
             incident.setAssignedTechnicianId(updatedIncident.getAssignedTechnicianId());
             incident.setAssignedTechnicianName(updatedIncident.getAssignedTechnicianName());
             incident.setAssignedTechnicianCategory(updatedIncident.getAssignedTechnicianCategory());
+            incident.setUrgent(updatedIncident.getUrgent());
 
             // If a new remark was sent, add it to the history list
             if (updatedIncident.getRemarksHistory() != null && !updatedIncident.getRemarksHistory().isEmpty()) {

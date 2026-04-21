@@ -8,6 +8,23 @@ const stripHtmlToText = (value) => {
 
 const safeLower = (value) => String(value ?? '').toLowerCase();
 
+const formatIncidentCreatedAt = (incident) => {
+  const raw = incident?.createdAt || incident?.dateReported;
+  if (!raw) return '—';
+  const hasTime = Boolean(incident?.createdAt);
+
+  if (!hasTime && typeof raw === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) return String(raw);
+
+  return hasTime
+    ? date.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
+    : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+};
+
 const getIncidentReference = (incident) => incident?.referenceId || incident?.id || '—';
 
 const MyIncidents = () => {
@@ -91,13 +108,24 @@ const MyIncidents = () => {
 
         {/* Search & Filters */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200 mb-6 flex flex-col sm:flex-row gap-4">
-          <input 
-            type="text" 
-            placeholder="Search by Title or ID..." 
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-md p-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+          <div className="flex-1 relative">
+            <input 
+              type="text" 
+              placeholder="Search by Title or ID..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full border border-gray-300 rounded-md p-2 pr-8 focus:ring-blue-500 focus:border-blue-500"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
+          </div>
           <select 
             value={filterStatus} 
             onChange={(e) => setFilterStatus(e.target.value)}
@@ -115,17 +143,12 @@ const MyIncidents = () => {
           <ul className="divide-y divide-gray-200">
             {filteredIncidents.length > 0 ? (
               filteredIncidents.map((incident) => (
-                <li key={incident.id} className={`p-6 hover:bg-gray-50 transition duration-150 ${incident.urgent ? 'border-l-4 border-red-500' : ''}`}>
+                <li key={incident.id} className="p-6 hover:bg-gray-50 transition duration-150">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-lg font-semibold text-gray-900 truncate">{incident.title}</p>
                         <div className="flex items-center gap-2">
-                          {incident.urgent && (
-                            <span className="inline-flex items-center text-xs font-bold text-red-700 bg-red-100 px-2 py-1 rounded border border-red-200">
-                              🚨 URGENT
-                            </span>
-                          )}
                           <p className={`px-3 py-1 inline-flex text-xs leading-5 font-bold rounded-full border ${getStatusBadge(incident.status)}`}>
                             {incident.status}
                           </p>
@@ -134,7 +157,7 @@ const MyIncidents = () => {
                       <p className="mt-2 text-sm text-gray-600 line-clamp-2">{stripHtmlToText(incident.description)}</p>
                       <div className="mt-3 flex justify-between items-center text-xs text-gray-500">
                         <span className="font-mono bg-gray-100 px-2 py-1 rounded">Ref: {getIncidentReference(incident)}</span>
-                        <span>Reported on: <span className="font-medium">{incident.dateReported}</span></span>
+                        <span>Created: <span className="font-medium">{formatIncidentCreatedAt(incident)}</span></span>
                       </div>
                       
                       {/* VIEW DETAILS BUTTON FOR THE USER */}
