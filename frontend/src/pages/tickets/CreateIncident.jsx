@@ -21,7 +21,6 @@ export default function CreateIncident() {
   const [subject, setSubject] = useState('');
   const [campus, setCampus] = useState('Malabe Campus');
   const [message, setMessage] = useState('');
-  const [urgent, setUrgent] = useState(false);
   
   // File Upload State
   const [proofFiles, setProofFiles] = useState([]);
@@ -99,7 +98,7 @@ export default function CreateIncident() {
   const handleReset = () => {
     setName(''); setEmail(''); setRegistrationNumber(''); setFaculty('');
     setContactNumber(''); setSubject(''); setCampus('Malabe Campus'); setMessage('');
-    setUrgent(false); setProofFiles([]); setFileError('');
+    setProofFiles([]); setFileError('');
   };
 
   const handleSubmit = async (e) => {
@@ -135,7 +134,6 @@ export default function CreateIncident() {
         campus: campus,
         description: message,
         proofUrls: base64Files,
-        urgent: urgent,
       };
 
       const response = await fetch('/api/incidents', {
@@ -264,20 +262,6 @@ export default function CreateIncident() {
               <option value="Matara Center">Matara Center</option>
               <option value="Kurunegala Center">Kurunegala Center</option>
             </select>
-          </div>
-
-          {/* Urgent Flag */}
-          <div className="flex items-center">
-            <input
-              type="checkbox"
-              id="urgent"
-              checked={urgent}
-              onChange={(e) => setUrgent(e.target.checked)}
-              className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
-            />
-            <label htmlFor="urgent" className="ml-2 text-sm font-semibold text-gray-800 cursor-pointer flex items-center gap-1">
-              🚨 Mark as urgent (needs to be fixed immediately)
-            </label>
           </div>
 
           {/* Medium Editor Component replacing the raw textarea */}
