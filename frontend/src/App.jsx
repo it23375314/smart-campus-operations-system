@@ -1,28 +1,74 @@
-// src/App.jsx
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import MyIncidents from './pages/tickets/MyIncidents';
-import CreateIncident from './pages/tickets/CreateIncident'; 
-import AdminDashboard from './pages/tickets/AdminDashboard';
-import UpdateIncident from './pages/tickets/UpdateIncident';
-import TechnicianManagement from './pages/tickets/TechnicianManagement';
-import IncidentDetails from './pages/tickets/IncidentDetails';
+import HomePage from './pages/HomePage';
+import DashboardPage from './pages/DashboardPage';
+import BookingFormPage from './pages/BookingFormPage';
+import MyBookingsPage from './pages/MyBookingsPage';
+
+import AvailabilityView from './pages/AvailabilityView';
+import AboutPage from './pages/AboutPage';
+import ResourcesPage from './pages/ResourcesPage';
+import LoginPage from './pages/LoginPage';
+import ProtectedRoute from './components/ProtectedRoute';
+import AdminLayout from './layouts/AdminLayout';
+import ResourceList from './pages/admin/ResourceList';
+import ResourceForm from './pages/admin/ResourceForm';
+import ResourceDetails from './pages/admin/ResourceDetails';
 
 function App() {
   return (
     <Router>
-      {/* The Navbar stays at the top of every page */}
-      <Navbar />
-      
-      {/* The Routes decide which page to show based on the URL */}
-      <Routes>
-        <Route path="/" element={<MyIncidents />} />
-        <Route path="/create" element={<CreateIncident />} />
-        <Route path="/admin" element={<AdminDashboard />} />
-        <Route path="/update/:id" element={<UpdateIncident />} />
-        <Route path="/technicians" element={<TechnicianManagement />} />
-        <Route path="/incident/:id" element={<IncidentDetails />} /> {/* NEW ROUTE ADDED HERE */}
-      </Routes>
+      <div className="min-h-screen bg-slate-50">
+        <Navbar />
+        <main className="">
+          <Routes>
+            {/* Public Institutional Routes */}
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/about" element={<AboutPage />} />
+            <Route path="/resources" element={<ResourcesPage />} />
+            <Route path="/availability" element={<AvailabilityView />} />
+
+            {/* Standard User Dashboards */}
+            <Route path="/dashboard" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
+                <DashboardPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Booking Flow: Visible to Student/Staff & Admin */}
+            <Route path="/bookings" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <BookingFormPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Persona Records: Visibility for Users, Admins, and Managers */}
+            <Route path="/my-bookings" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
+                <MyBookingsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* Admin panel: sidebar layout wraps all /admin/* routes */}
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER']}>
+                  <AdminLayout />
+                </ProtectedRoute>
+              }
+            >
+              <Route index element={<Navigate to="resources" replace />} />
+              <Route path="resources" element={<ResourceList />} />
+              <Route path="resources/add" element={<ResourceForm />} />
+              <Route path="resources/edit/:id" element={<ResourceForm />} />
+              <Route path="resources/view/:id" element={<ResourceDetails />} />
+            </Route>
+          </Routes>
+        </main>
+      </div>
     </Router>
   );
 }
