@@ -18,7 +18,8 @@ import {
   LayoutDashboard,
   ListChecks,
   LineChart,
-  Activity
+  Activity,
+  AlertCircle
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -56,6 +57,7 @@ const Navbar = () => {
         return [
           { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+          { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
         ];
       case 'MANAGER':
         // ✅ 5. MANAGER Navbar
@@ -68,6 +70,7 @@ const Navbar = () => {
         return [
           { path: '/bookings', label: 'Book Resource', icon: <PlusCircle size={18} /> },
           { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} /> },
+          { path: '/my-incidents', label: 'My Incidents', icon: <AlertCircle size={18} /> },
         ];
     }
   };

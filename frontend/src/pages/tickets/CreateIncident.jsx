@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
+import { AlertCircle, Send, CheckCircle, ArrowLeft, Loader2, X, Paperclip, RotateCcw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Import Medium Editor and its default themes
 import MediumEditor from 'medium-editor';
@@ -20,12 +22,16 @@ export default function CreateIncident() {
   const [contactNumber, setContactNumber] = useState('');
   const [subject, setSubject] = useState('');
   const [campus, setCampus] = useState('Malabe Campus');
+  const [resource, setResource] = useState('');
+  const [category, setCategory] = useState('');
+  const [priority, setPriority] = useState('Medium');
   const [message, setMessage] = useState('');
   
   // File Upload State
   const [proofFiles, setProofFiles] = useState([]);
   const [fileError, setFileError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState({ type: '', message: '' });
 
   useEffect(() => {
     if (!editorElementRef.current) return;
@@ -33,7 +39,7 @@ export default function CreateIncident() {
     mediumEditorRef.current = new MediumEditor(editorElementRef.current, {
       toolbar: false,
       placeholder: {
-        text: 'Type your message...',
+        text: 'Describe your issue in detail...',
         hideOnClick: false,
       },
     });
@@ -55,7 +61,6 @@ export default function CreateIncident() {
         mediumEditorRef.current = null;
       }
     };
-    // Intentionally initialize once; we sync content via the effect below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -81,6 +86,21 @@ export default function CreateIncident() {
     setFileError('');
     const newFiles = Array.from(e.target.files);
     
+    // Check if exceeding 3 image limit
+    if (proofFiles.length + newFiles.length > 3) {
+      setFileError('Maximum 3 image attachments allowed. You have ' + proofFiles.length + ' file(s) already.');
+      e.target.value = '';
+      return;
+    }
+    
+    // Check file types (images only)
+    const invalidFile = newFiles.find(file => !['image/jpeg', 'image/jpg', 'image/png'].includes(file.type));
+    if (invalidFile) {
+      setFileError(`File "${invalidFile.name}" is not a valid image. Only JPG and PNG are allowed.`);
+      e.target.value = '';
+      return;
+    }
+    
     const oversizedFile = newFiles.find(file => file.size > 5242880);
     if (oversizedFile) {
       setFileError(`File "${oversizedFile.name}" is too large. Maximum size is 5MB.`);
@@ -97,8 +117,9 @@ export default function CreateIncident() {
 
   const handleReset = () => {
     setName(''); setEmail(''); setRegistrationNumber(''); setFaculty('');
-    setContactNumber(''); setSubject(''); setCampus('Malabe Campus'); setMessage('');
-    setProofFiles([]); setFileError('');
+    setContactNumber(''); setSubject(''); setCampus('Malabe Campus'); setResource('');
+    setCategory(''); setPriority('Medium'); setMessage('');
+    setProofFiles([]); setFileError(''); setSubmitStatus({ type: '', message: '' });
   };
 
   const handleSubmit = async (e) => {
@@ -106,7 +127,7 @@ export default function CreateIncident() {
     if (fileError) return;
     
     if (faculty === '' || faculty === 'Select') {
-        alert("Please select your Faculty.");
+        setSubmitStatus({ type: 'error', message: 'Please select your Faculty.' });
         return;
     }
 
@@ -115,7 +136,6 @@ export default function CreateIncident() {
     try {
       const base64Files = await Promise.all(proofFiles.map(readFileAsDataUrl));
 
-      // Track the "current user" for MyIncidents (no auth in this app)
       try {
         localStorage.setItem('scos.registrationNumber', registrationNumber);
         if (email) localStorage.setItem('scos.email', email);
@@ -132,17 +152,25 @@ export default function CreateIncident() {
         contactNumber: contactNumber,
         title: subject,
         campus: campus,
+        resource: resource,
+        category: category,
+        priority: priority,
         description: message,
+        status: 'OPEN',
         proofUrls: base64Files,
       };
 
-      const response = await fetch('/api/incidents', {
+      const response = await fetch('http://localhost:8080/api/incidents', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(newIncident),
       });
 
-      if (!response.ok) throw new Error('Failed to create ticket');
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        const errorMsg = errorData.message || `Server error: ${response.status}`;
+        throw new Error(errorMsg);
+      }
 
       const createdIncident = await response.json();
       if (createdIncident?.id) {
@@ -157,169 +185,272 @@ export default function CreateIncident() {
         }
       }
 
-      alert("✅ Ticket submitted successfully!");
-      handleReset();
-      navigate('/'); 
+      setSubmitStatus({ type: 'success', message: '✅ Incident reported successfully! Redirecting...' });
+      setTimeout(() => {
+        handleReset();
+        navigate('/my-incidents'); 
+      }, 1500);
 
     } catch (error) {
       console.error("Error:", error);
-      alert("❌ There was an error submitting the ticket.");
+      setSubmitStatus({ type: 'error', message: `❌ Error: ${error.message || 'There was an error submitting the incident. Please try again.'}` });
     } finally {
       setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="bg-gray-100 min-h-screen py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto bg-white p-8 sm:p-10 rounded shadow-md border border-gray-200">
-        
-        <div className="mb-6 border-b border-gray-200 pb-4">
-          <h2 className="text-xl text-gray-700 mb-2">
-            Please complete this form and one of our agents will reply to you by email as soon as possible.
-          </h2>
+    <div className="max-w-4xl mx-auto pt-40 pb-12 px-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card bg-white border border-slate-100 overflow-hidden"
+      >
+        {/* Header Section */}
+        <div className="flex items-center justify-between gap-4 px-8 py-6 border-b border-slate-100">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-indigo-100 text-indigo-600 rounded-2xl">
+              <AlertCircle size={24} />
+            </div>
+            <div>
+              <h1 className="text-4xl font-black text-slate-900 leading-none mb-1">Report an Issue</h1>
+              <p className="text-slate-500 font-medium">Submit a detailed incident report for review by our team.</p>
+            </div>
+          </div>
+          <Link 
+            to="/my-incidents" 
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-100 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all font-black text-xs uppercase tracking-widest shadow-sm whitespace-nowrap"
+          >
+            <ArrowLeft size={15} />
+            My Incidents
+          </Link>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6 p-8">
           
           {/* Name & Email Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label className="block text-sm font-semibold text-gray-800 mb-1">Name *</label>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Full Name *</label>
               <input
-                className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 bg-gray-50"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                 type="text" value={name} onChange={(e) => setName(e.target.value)} required
               />
             </div>
-            <div>
-              <div className="flex justify-between items-end mb-1">
-                <label className="block text-sm font-semibold text-gray-800">Email</label>
-                <span className="text-xs text-blue-600 hover:underline cursor-pointer">Manage my email addresses</span>
-              </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Email</label>
               <input
-                className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 bg-gray-50"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
                 type="email" value={email} onChange={(e) => setEmail(e.target.value)}
               />
             </div>
           </div>
 
-          {/* Registration Number */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Registration number *</label>
-            <input
-              className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
-              type="text" value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} required
-            />
+          {/* Registration Number & Faculty Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Registration Number *</label>
+              <input
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                type="text" value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Faculty / School *</label>
+              <select
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
+                value={faculty} onChange={(e) => setFaculty(e.target.value)} required
+              >
+                <option value="Select">Select Faculty...</option>
+                <option value="Faculty of Computing">Faculty of Computing</option>
+                <option value="School of Business">School of Business</option>
+                <option value="Faculty of Engineering">Faculty of Engineering</option>
+                <option value="Faculty of Humanities & Sciences">Faculty of Humanities & Sciences</option>
+                <option value="School of Architecture">School of Architecture</option>
+                <option value="Faculty of Graduate Studies & Research">Faculty of Graduate Studies & Research</option>
+              </select>
+            </div>
           </div>
 
-          {/* Faculty / School */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Faculty / School *</label>
-            <p className="text-xs text-gray-500 mb-1">Please select your faculty</p>
-            <select
-              className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 bg-white"
-              value={faculty} onChange={(e) => setFaculty(e.target.value)} required
-            >
-              <option value="Select">Select</option>
-              <option value="Faculty of Computing">Faculty of Computing</option>
-              <option value="School of Business">School of Business</option>
-              <option value="Faculty of Engineering">Faculty of Engineering</option>
-              <option value="Faculty of Humanities & Sciences">Faculty of Humanities & Sciences</option>
-              <option value="School of Architecture">School of Architecture</option>
-              <option value="Faculty of Graduate Studies & Research">Faculty of Graduate Studies & Research</option>
-            </select>
+          {/* Contact Number & Campus Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Contact Number *</label>
+              <input
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} required
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Campus / Center *</label>
+              <select
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
+                value={campus} onChange={(e) => setCampus(e.target.value)} required
+              >
+                <option value="Malabe Campus">Malabe Campus</option>
+                <option value="Kandy Uni / Kandy Center">Kandy Uni / Kandy Center</option>
+                <option value="Nothern Uni">Nothern Uni</option>
+                <option value="Matara Center">Matara Center</option>
+                <option value="Kurunegala Center">Kurunegala Center</option>
+              </select>
+            </div>
           </div>
 
-          {/* Contact Number */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Contact number *</label>
-            <p className="text-xs text-gray-500 mb-1">Enter your mobile telephone number</p>
-            <input
-              className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
-              type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} required
-            />
+          {/* Resource & Category Row */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Resource / Location *</label>
+              <input
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                type="text" value={resource} onChange={(e) => setResource(e.target.value)} required
+                placeholder="e.g., Lecture Hall 101, Laboratory 3"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Category *</label>
+              <select
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
+                value={category} onChange={(e) => setCategory(e.target.value)} required
+              >
+                <option value="">Select Category...</option>
+                <option value="Infrastructure">Infrastructure (Damage/Maintenance)</option>
+                <option value="Equipment">Equipment (Broken/Malfunctioning)</option>
+                <option value="Facility">Facility Issue</option>
+                <option value="Safety">Safety Concern</option>
+                <option value="Cleanliness">Cleanliness Issue</option>
+                <option value="Accessibility">Accessibility Problem</option>
+                <option value="Other">Other</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Priority */}
+          <div className="space-y-2">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Priority Level *</label>
+            <div className="flex flex-wrap gap-3">
+              {['Low', 'Medium', 'High', 'Urgent'].map((level) => {
+                const colors = {
+                  Low:    { active: 'bg-slate-800 text-white border-slate-800',    inactive: 'bg-white text-slate-500 border-slate-200 hover:border-slate-400' },
+                  Medium: { active: 'bg-indigo-600 text-white border-indigo-600',  inactive: 'bg-white text-indigo-600 border-indigo-200 hover:border-indigo-400' },
+                  High:   { active: 'bg-amber-500 text-white border-amber-500',    inactive: 'bg-white text-amber-600 border-amber-200 hover:border-amber-400' },
+                  Urgent: { active: 'bg-rose-600 text-white border-rose-600',      inactive: 'bg-white text-rose-600 border-rose-200 hover:border-rose-400' },
+                };
+                const isActive = priority === level;
+                return (
+                  <button
+                    key={level} type="button"
+                    onClick={() => setPriority(level)}
+                    className={`px-5 py-2 rounded-2xl text-xs font-black uppercase tracking-widest border transition-all ${isActive ? colors[level].active : colors[level].inactive}`}
+                  >
+                    {level}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {/* Subject */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Subject *</label>
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Issue Subject *</label>
             <input
-              className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700"
+              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
               type="text" value={subject} onChange={(e) => setSubject(e.target.value)} required
+              placeholder="Brief title of your issue"
             />
           </div>
 
-          {/* Campus/Center */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Campus/Center *</label>
-            <p className="text-xs text-gray-500 mb-1">Please select the Campus or the Center that you are currently registered to, so that the ticket will be assigned to the correct campus/center agent.</p>
-            <select
-              className="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500 outline-none text-gray-700 bg-white"
-              value={campus} onChange={(e) => setCampus(e.target.value)} required
-            >
-              <option value="Malabe Campus">Malabe Campus</option>
-              <option value="Kandy Uni / Kandy Center">Kandy Uni / Kandy Center</option>
-              <option value="Nothern Uni">Nothern Uni</option>
-              <option value="Matara Center">Matara Center</option>
-              <option value="Kurunegala Center">Kurunegala Center</option>
-            </select>
-          </div>
-
-          {/* Medium Editor Component replacing the raw textarea */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-1">Message *</label>
-            <div className="border border-gray-300 rounded focus-within:ring-1 focus-within:ring-blue-500 focus-within:border-blue-500 bg-white">
+          {/* Message Editor */}
+          <div className="space-y-1.5">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Detailed Description *</label>
+            <div className="border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent bg-slate-50 overflow-hidden">
               <div
                 ref={editorElementRef}
                 contentEditable
                 suppressContentEditableWarning
-                className="w-full p-3 outline-none text-gray-700 min-h-[150px] cursor-text"
+                className="w-full p-4 outline-none text-sm text-slate-900 min-h-[200px] cursor-text font-medium"
               />
             </div>
           </div>
 
           {/* Add Attachment */}
-          <div>
-            <label className="block text-sm font-semibold text-gray-800 mb-2">Add attachment</label>
-            <div className="w-full border border-dashed border-gray-300 p-4 rounded bg-gray-50 flex items-center gap-3">
-              <label className="cursor-pointer bg-white border border-gray-300 px-3 py-1.5 rounded text-sm font-medium text-gray-700 hover:bg-gray-50 transition shadow-sm">
-                <input type="file" multiple accept=".jpg,.jpeg,.png,.pdf" onChange={handleFileChange} className="hidden" />
-                📄 Choose files
+          <div className="space-y-3">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
+              <Paperclip size={11} /> Evidence / Attachments (Optional — up to 3 images)
+            </label>
+            <div className="w-full border-2 border-dashed border-slate-200 p-6 rounded-2xl bg-slate-50 flex flex-col items-center gap-3 hover:border-indigo-300 hover:bg-indigo-50/40 transition-all">
+              <label className="cursor-pointer flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200">
+                <input type="file" multiple accept=".jpg,.jpeg,.png" onChange={handleFileChange} className="hidden" />
+                <Paperclip size={14} /> Choose Images
               </label>
-              <span className="text-gray-500 text-sm">or drag and drop</span>
+              <span className="text-slate-400 text-xs font-medium">Max 5 MB per image · 3 images total · JPG & PNG only</span>
             </div>
             
-            {fileError && <p className="text-red-500 text-sm mt-2">{fileError}</p>}
+            <AnimatePresence>
+              {fileError && (
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="p-4 rounded-2xl bg-rose-50 text-rose-700 border border-rose-100 text-sm font-medium"
+                >
+                  {fileError}
+                </motion.div>
+              )}
+            </AnimatePresence>
             
             {proofFiles.length > 0 && (
-              <ul className="mt-3 space-y-2 max-h-48 overflow-y-auto">
-                {proofFiles.map((file, index) => (
-                  <li key={index} className="flex items-center justify-between bg-white border border-gray-200 p-2 rounded text-sm text-gray-700 shadow-sm">
-                    <span className="truncate max-w-[80%] font-medium">{file.name}</span>
-                    <button type="button" onClick={() => removeFile(index)} className="text-red-500 hover:text-red-700 text-xs font-bold px-2">Remove</button>
-                  </li>
-                ))}
-              </ul>
+              <div className="space-y-2 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{proofFiles.length}/3 images selected</p>
+                <ul className="space-y-2 max-h-48 overflow-y-auto">
+                  {proofFiles.map((file, index) => (
+                    <li key={index} className="flex items-center justify-between bg-white border border-slate-100 p-3 rounded-xl text-sm text-slate-700 shadow-sm">
+                      <span className="truncate max-w-[80%] font-medium text-slate-800">{file.name}</span>
+                      <button type="button" onClick={() => removeFile(index)} className="flex items-center gap-1 text-rose-500 hover:text-rose-700 font-black text-xs uppercase tracking-widest px-2 transition">
+                        <X size={12} /> Remove
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             )}
           </div>
 
+          {/* Status Message */}
+          <AnimatePresence>
+            {submitStatus.message && (
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className={`p-4 rounded-2xl flex items-center gap-3 ${
+                  submitStatus.type === 'success' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-rose-50 text-rose-700 border border-rose-100'
+                }`}
+              >
+                <CheckCircle size={18} />
+                <p className="text-sm font-bold">{submitStatus.message}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
           {/* Buttons */}
-          <div className="flex items-center gap-3 pt-2">
+          <div className="flex items-center gap-3 pt-6 border-t border-slate-100">
             <button
-              className={`bg-[#2c75d3] hover:bg-[#1a5baf] text-white font-medium py-2 px-6 rounded transition ${isSubmitting ? 'opacity-70 cursor-not-allowed' : ''}`}
               type="submit" disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 active:scale-95"
             >
-              {isSubmitting ? 'Submitting...' : 'Submit'}
+              {isSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+              {isSubmitting ? 'Submitting…' : 'Submit Incident Report'}
             </button>
             <button
-              className="bg-white border border-gray-300 text-gray-700 hover:bg-gray-50 font-medium py-2 px-6 rounded transition"
               type="button" onClick={handleReset} disabled={isSubmitting}
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-100 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all font-black text-xs uppercase tracking-widest shadow-sm disabled:opacity-50"
             >
-              Reset
+              <RotateCcw size={13} /> Reset Form
             </button>
           </div>
         </form>
 
-      </div>
+      </motion.div>
     </div>
   );
-}
+}

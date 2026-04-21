@@ -5,6 +5,11 @@ import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import BookingFormPage from './pages/BookingFormPage';
 import MyBookingsPage from './pages/MyBookingsPage';
+import MyIncidents from './pages/tickets/MyIncidents';
+import CreateIncident from './pages/tickets/CreateIncident';
+import IncidentDetails from './pages/tickets/IncidentDetails';
+import UpdateIncident from './pages/tickets/UpdateIncident';
+import TicketList from './pages/tickets/TicketList';
 
 import AvailabilityView from './pages/AvailabilityView';
 import AboutPage from './pages/AboutPage';
@@ -48,6 +53,41 @@ function App() {
             <Route path="/my-bookings" element={
               <ProtectedRoute allowedRoles={['USER', 'ADMIN', 'MANAGER']}>
                 <MyBookingsPage />
+              </ProtectedRoute>
+            } />
+            
+            {/* My Incidents: Visibility for Users to view their reported incidents */}
+            <Route path="/my-incidents" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <MyIncidents />
+              </ProtectedRoute>
+            } />
+            
+            {/* Create Incident: Report a new issue */}
+            <Route path="/create" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <CreateIncident />
+              </ProtectedRoute>
+            } />
+            
+            {/* View Incident Details: User views their incident details and comments */}
+            <Route path="/incident/:id" element={
+              <ProtectedRoute allowedRoles={['USER', 'ADMIN']}>
+                <IncidentDetails />
+              </ProtectedRoute>
+            } />
+            
+            {/* Update/Manage Incident: Admin manages ticket status, assigns technician, adds notes */}
+            <Route path="/update/:id" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <UpdateIncident />
+              </ProtectedRoute>
+            } />
+
+            {/* Ticket List: Admin overview of reported incidents */}
+            <Route path="/ticket-list" element={
+              <ProtectedRoute allowedRoles={['ADMIN']}>
+                <TicketList />
               </ProtectedRoute>
             } />
             

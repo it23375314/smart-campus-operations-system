@@ -123,15 +123,25 @@ public class IncidentController {
 
         if (existingIncident.isPresent()) {
             Incident incident = existingIncident.get();
-            incident.setStatus(updatedIncident.getStatus());
-            incident.setAssignedTechnicianId(updatedIncident.getAssignedTechnicianId());
-            incident.setAssignedTechnicianName(updatedIncident.getAssignedTechnicianName());
-            incident.setAssignedTechnicianCategory(updatedIncident.getAssignedTechnicianCategory());
-            incident.setUrgent(updatedIncident.getUrgent());
+            if (updatedIncident.getStatus() != null) {
+                incident.setStatus(updatedIncident.getStatus());
+            }
+            if (updatedIncident.getAssignedTechnicianId() != null) {
+                incident.setAssignedTechnicianId(updatedIncident.getAssignedTechnicianId());
+            }
+            if (updatedIncident.getAssignedTechnicianName() != null) {
+                incident.setAssignedTechnicianName(updatedIncident.getAssignedTechnicianName());
+            }
+            if (updatedIncident.getAssignedTechnicianCategory() != null) {
+                incident.setAssignedTechnicianCategory(updatedIncident.getAssignedTechnicianCategory());
+            }
+            if (updatedIncident.getUrgent() != null) {
+                incident.setUrgent(updatedIncident.getUrgent());
+            }
 
-            // If a new remark was sent, add it to the history list
-            if (updatedIncident.getRemarksHistory() != null && !updatedIncident.getRemarksHistory().isEmpty()) {
-                incident.getRemarksHistory().addAll(updatedIncident.getRemarksHistory());
+            // Replace remarksHistory when the client sends the full updated list.
+            if (updatedIncident.getRemarksHistory() != null) {
+                incident.setRemarksHistory(updatedIncident.getRemarksHistory());
             }
 
             return incidentRepository.save(incident);

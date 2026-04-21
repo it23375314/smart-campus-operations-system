@@ -1,123 +1,221 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  Users, Plus, Trash2, ArrowLeft, RefreshCw,
+  Mail, Tag, UserCheck, Loader2
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const CATEGORY_COLORS = {
+  'IT Support':  'bg-indigo-100 text-indigo-700 border-indigo-200',
+  'Electrical':  'bg-amber-100 text-amber-700 border-amber-200',
+  'Maintenance': 'bg-blue-100 text-blue-700 border-blue-200',
+  'Network':     'bg-emerald-100 text-emerald-700 border-emerald-200',
+};
 
 const TechnicianManagement = () => {
   const [technicians, setTechnicians] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('IT Support');
 
   const fetchTechnicians = () => {
-    fetch('/api/technicians')
+    setLoading(true);
+    fetch('http://localhost:8080/api/technicians')
       .then(res => res.json())
       .then(data => setTechnicians(data))
-      .catch(err => console.error(err));
+      .catch(err => console.error(err))
+      .finally(() => setLoading(false));
   };
 
-  useEffect(() => {
-    fetchTechnicians();
-  }, []);
+  useEffect(() => { fetchTechnicians(); }, []);
 
   const handleAddTechnician = async (e) => {
     e.preventDefault();
-    const newTech = { name, email, category };
-
+    setSubmitting(true);
     try {
-      const response = await fetch('/api/technicians', {
+      const response = await fetch('http://localhost:8080/api/technicians', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newTech),
+        body: JSON.stringify({ name, email, category }),
       });
       if (response.ok) {
         setName(''); setEmail(''); setCategory('IT Support');
-        fetchTechnicians(); // Refresh list
+        fetchTechnicians();
       }
     } catch (error) {
-      console.error("Error adding technician:", error);
+      console.error('Error adding technician:', error);
+    } finally {
+      setSubmitting(false);
     }
   };
 
   const handleDelete = async (id) => {
-    if(!window.confirm("Are you sure you want to remove this technician?")) return;
+    if (!window.confirm('Are you sure you want to remove this technician?')) return;
     try {
-      await fetch(`/api/technicians/${id}`, { method: 'DELETE' });
+      await fetch(`http://localhost:8080/api/technicians/${id}`, { method: 'DELETE' });
       fetchTechnicians();
     } catch (error) {
-      console.error("Error deleting:", error);
+      console.error('Error deleting:', error);
     }
   };
 
+  const getInitials = (n) => n?.split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase() || '?';
+
   return (
-    <div className="min-h-screen bg-gray-50 py-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-5xl mx-auto">
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h1 className="text-3xl font-extrabold text-gray-900">Technician Management</h1>
-            <p className="mt-2 text-sm text-gray-600">Add or remove support staff members.</p>
-          </div>
-          <Link to="/admin" className="text-gray-600 hover:text-gray-900 font-medium bg-white border border-gray-300 py-2 px-4 rounded-md shadow-sm transition">
-            &larr; Back to Dashboard
+    <div className="max-w-6xl mx-auto pt-40 pb-12 px-4 space-y-8">
+
+      {/* Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-4xl font-black text-slate-900 leading-none mb-2">Technician Management</h1>
+          <p className="text-slate-500 font-medium">Add or remove support staff members.</p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={fetchTechnicians}
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-100 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all font-bold shadow-sm"
+          >
+            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+            Refresh
+          </button>
+          <Link
+            to="/admin"
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-slate-100 rounded-2xl text-slate-600 hover:bg-slate-50 transition-all font-black text-xs uppercase tracking-widest shadow-sm"
+          >
+            <ArrowLeft size={16} />
+            Back to Dashboard
           </Link>
         </div>
+      </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {/* Add Technician Form */}
-          <div className="md:col-span-1 bg-white shadow rounded-lg p-6 border border-gray-200 h-fit">
-            <h2 className="text-lg font-bold text-gray-800 border-b pb-2 mb-4">Add New Technician</h2>
-            <form onSubmit={handleAddTechnician}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Full Name</label>
-                <input type="text" required value={name} onChange={e => setName(e.target.value)} className="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500" placeholder="e.g., Kamal Perera" />
-              </div>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
-                <input type="email" required value={email} onChange={e => setEmail(e.target.value)} className="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500" placeholder="tech@campus.edu" />
-              </div>
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Category</label>
-                <select value={category} onChange={e => setCategory(e.target.value)} className="w-full border border-gray-300 p-2 rounded-md focus:ring-blue-500">
-                  <option value="IT Support">IT Support</option>
-                  <option value="Electrical">Electrical</option>
-                  <option value="Maintenance">Maintenance</option>
-                  <option value="Network">Network</option>
-                </select>
-              </div>
-              <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md transition">Add Technician</button>
-            </form>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
+        {/* Add Form */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4 }}
+          className="md:col-span-1 glass-card bg-white border border-slate-100 p-6 h-fit"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2.5 bg-indigo-100 text-indigo-600 rounded-2xl">
+              <UserCheck size={20} />
+            </div>
+            <h2 className="text-lg font-black text-slate-900">Add Technician</h2>
           </div>
 
-          {/* Technicians List */}
-          <div className="md:col-span-2 bg-white shadow rounded-lg overflow-hidden border border-gray-200">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Name</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {technicians.map(tech => (
-                  <tr key={tech.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{tech.name}</div>
-                      <div className="text-sm text-gray-500">{tech.email}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">{tech.category}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => handleDelete(tech.id)} className="text-red-600 hover:text-red-900 font-semibold">Remove</button>
-                    </td>
-                  </tr>
+          <form onSubmit={handleAddTechnician} className="space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Full Name</label>
+              <input
+                type="text" required value={name} onChange={e => setName(e.target.value)}
+                placeholder="e.g., Kamal Perera"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Email Address</label>
+              <input
+                type="email" required value={email} onChange={e => setEmail(e.target.value)}
+                placeholder="tech@campus.edu"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Category</label>
+              <select
+                value={category} onChange={e => setCategory(e.target.value)}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
+              >
+                <option value="IT Support">IT Support</option>
+                <option value="Electrical">Electrical</option>
+                <option value="Maintenance">Maintenance</option>
+                <option value="Network">Network</option>
+              </select>
+            </div>
+            <button
+              type="submit" disabled={submitting}
+              className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 disabled:opacity-50 mt-2"
+            >
+              {submitting ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />}
+              {submitting ? 'Adding…' : 'Add Technician'}
+            </button>
+          </form>
+        </motion.div>
+
+        {/* Technicians List */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.1 }}
+          className="md:col-span-2 glass-card bg-white border border-slate-100 overflow-hidden"
+        >
+          <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 bg-slate-100 text-slate-600 rounded-2xl">
+                <Users size={18} />
+              </div>
+              <div>
+                <h2 className="text-base font-black text-slate-900">Support Staff</h2>
+                <p className="text-xs text-slate-400 font-medium">{technicians.length} member{technicians.length !== 1 ? 's' : ''} registered</p>
+              </div>
+            </div>
+          </div>
+
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3" />
+              <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Loading Staff…</p>
+            </div>
+          ) : technicians.length === 0 ? (
+            <div className="text-center py-16">
+              <Users className="mx-auto text-slate-200 mb-4" size={48} />
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No technicians yet</h3>
+              <p className="text-slate-400 font-medium mt-1 text-sm">Add your first staff member using the form.</p>
+            </div>
+          ) : (
+            <ul className="divide-y divide-slate-100">
+              <AnimatePresence>
+                {technicians.map((tech, index) => (
+                  <motion.li
+                    key={tech.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -4 }}
+                    transition={{ delay: index * 0.04 }}
+                    className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-all group"
+                  >
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-600 flex items-center justify-center font-black text-sm shrink-0">
+                        {getInitials(tech.name)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-900">{tech.name}</p>
+                        <p className="text-xs text-slate-400 flex items-center gap-1.5 mt-0.5">
+                          <Mail size={11} /> {tech.email}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border ${CATEGORY_COLORS[tech.category] || 'bg-slate-100 text-slate-600 border-slate-200'}`}>
+                        <Tag size={10} /> {tech.category}
+                      </span>
+                      <button
+                        onClick={() => handleDelete(tech.id)}
+                        className="flex items-center gap-2 px-4 py-2 text-slate-400 hover:text-rose-600 border border-slate-100 hover:border-rose-100 hover:bg-rose-50 rounded-2xl transition-all font-black text-xs uppercase tracking-widest"
+                      >
+                        <Trash2 size={13} /> Remove
+                      </button>
+                    </div>
+                  </motion.li>
                 ))}
-                {technicians.length === 0 && (
-                  <tr><td colSpan="3" className="px-6 py-4 text-center text-gray-500">No technicians added yet.</td></tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
+              </AnimatePresence>
+            </ul>
+          )}
+        </motion.div>
       </div>
     </div>
   );
