@@ -25,7 +25,7 @@ const MOCK_RESOURCES = [
     capacity: 500,
     status: 'AVAILABLE',
     description: 'Large venue for university events and seminars.',
-    imageUrl: 'https://images.unsplash.com/photo-1517457373958-b7bdd20df0f1?w=600&q=80',
+    imageUrl: '/images/auditorium.png',
     availableDays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
   },
   {
@@ -35,7 +35,7 @@ const MOCK_RESOURCES = [
     capacity: 40,
     status: 'UNAVAILABLE',
     description: 'Fully equipped computer lab with high-speed internet.',
-    imageUrl: 'https://images.unsplash.com/photo-1541339907198-e08759dfc3f0?w=600&q=80',
+    imageUrl: '/images/computer_lab.png',
     availableDays: ['Monday', 'Wednesday', 'Friday'],
   },
   {
