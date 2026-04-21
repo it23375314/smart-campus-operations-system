@@ -1,31 +1,32 @@
-import { useState } from 'react'
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { useAuth } from './context/AuthContext';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Dashboard from './pages/Dashboard';
+import UserManagement from './pages/UserManagement';
+import Notifications from './pages/Notifications';
+import ProtectedRoute from './components/ProtectedRoute';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const { user } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white p-8 rounded-2xl shadow-lg max-w-md w-full text-center">
-        <h1 className="text-4xl font-bold tracking-tight text-gray-900 mb-4">
-          Vite + React
-        </h1>
-        <p className="text-gray-600 mb-8">
-          Tailwind CSS is configured and working!
-        </p>
-        
-        <button
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-2 px-6 rounded-lg transition duration-200"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-        
-        <div className="mt-8 text-sm text-gray-500">
-          <p>Ready to start building your application!</p>
-        </div>
-      </div>
-    </div>
-  )
+    <Routes>
+      <Route path="/login" element={!user ? <Login /> : <Navigate to="/dashboard" />} />
+      <Route path="/register" element={!user ? <Register /> : <Navigate to="/dashboard" />} />
+      <Route path="/dashboard" element={
+        <ProtectedRoute><Dashboard /></ProtectedRoute>
+      } />
+      <Route path="/users" element={
+        <ProtectedRoute adminOnly={true}><UserManagement /></ProtectedRoute>
+      } />
+      <Route path="/notifications" element={
+        <ProtectedRoute><Notifications /></ProtectedRoute>
+      } />
+      <Route path="/" element={<Navigate to="/dashboard" />} />
+      <Route path="*" element={<Navigate to="/dashboard" />} />
+    </Routes>
+  );
 }
 
-export default App
+export default App;
