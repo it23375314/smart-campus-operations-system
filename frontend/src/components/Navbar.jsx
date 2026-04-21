@@ -92,22 +92,22 @@ const Navbar = () => {
         </Link>
         
         {/* Main Nav */}
-        <div className="hidden lg:flex items-center gap-2 p-1.5 rounded-2xl border transition-all bg-slate-900/5 border-slate-900/5">
+        <div className="hidden lg:flex items-center gap-1.5 p-1 rounded-2xl border transition-all bg-slate-900/5 border-slate-900/5">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) => `
-                relative flex items-center gap-2 px-5 py-3 rounded-xl font-bold transition-all text-sm overflow-hidden group
+                relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-sm overflow-hidden group
                 ${isActive 
-                  ? 'bg-white text-indigo-700 shadow-sm'
-                  : 'text-slate-500 hover:text-slate-900'
+                  ? 'bg-white text-indigo-700 shadow-sm active border border-indigo-100/50'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-white/50'
                 }
               `}
             >
               {item.icon}
               {item.label}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 transition-all group-[.active]:opacity-100 bg-indigo-600" />
+              <div className="absolute bottom-0 left-0 right-0 h-0.5 transition-all opacity-0 group-[.active]:opacity-100 bg-indigo-600" />
             </NavLink>
           ))}
         </div>

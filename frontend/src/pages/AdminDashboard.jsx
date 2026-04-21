@@ -64,7 +64,7 @@ const AdminDashboard = () => {
   const isManager = currentUser?.role === 'MANAGER';
 
   return (
-    <div className="max-w-7xl mx-auto py-12 px-4 space-y-8">
+    <div className="max-w-7xl mx-auto pt-40 pb-12 px-4 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-slate-900 text-white rounded-[2rem] shadow-xl">

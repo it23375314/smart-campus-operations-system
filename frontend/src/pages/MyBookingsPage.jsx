@@ -57,7 +57,7 @@ const MyBookingsPage = () => {
   };
 
   return (
-    <div className="max-w-6xl mx-auto py-12 px-4 space-y-10">
+    <div className="max-w-6xl mx-auto pt-40 pb-12 px-4 space-y-10">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-4xl font-black text-slate-900 leading-none mb-2">My Requests</h1>

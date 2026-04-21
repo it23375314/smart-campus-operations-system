@@ -4,7 +4,7 @@ import { Building2, Microscope, Users, Globe, ArrowRight, ShieldCheck, Mail, Pho
 
 const AboutPage = () => {
   return (
-    <div className="bg-white min-h-screen pt-32 pb-20">
+    <div className="bg-white min-h-screen pt-40 pb-20">
       <div className="max-w-7xl mx-auto px-6">
         {/* Institutional Hero */}
         <div className="grid lg:grid-cols-2 gap-20 items-center mb-40">

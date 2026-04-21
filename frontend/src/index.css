@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=DM+Serif+Display&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@100..900&family=DM+Serif+Display&display=swap');
 
 @import "tailwindcss";
 
@@ -9,11 +9,13 @@
 
 body {
   @apply antialiased text-slate-900 overflow-x-hidden transition-colors duration-500 bg-white;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Outfit', sans-serif;
 }
 
 h1, h2, h3, .font-prestige {
-  font-family: 'DM Serif Display', serif;
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.02em;
 }
 
 /* 🎞️ Local SVG Noise Filter (No external dependencies) */
@@ -38,6 +40,14 @@ h1, h2, h3, .font-prestige {
 .glass-dark {
   @apply backdrop-blur-3xl border border-white/10 shadow-2xl;
   background: rgba(15, 23, 42, 0.8);
+}
+
+.bg-blueprint {
+  background-image: url('/blueprint.png');
+  background-attachment: fixed;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 /* ✨ Premium Scrollbar */

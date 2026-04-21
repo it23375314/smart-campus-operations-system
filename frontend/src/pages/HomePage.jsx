@@ -244,21 +244,14 @@ const HomePage = () => {
             </div>
          </div>
       </section>
-
       {/* 🏙️ LANDMARK SHOWCASE: Immersive Snap Gallery (Phase 5 New) */}
       <section className="py-20 bg-slate-100">
          <div className="max-w-[1440px] mx-auto px-6 mb-16 flex items-end justify-between">
             <div className="max-w-2xl">
-               <span className="text-indigo-600 font-black tracking-widest uppercase text-[11px] mb-6 block">The Landmark Collection</span>
+               <span className="text-indigo-600 font-black tracking-widest uppercase text-[11px] mb-6 block underline underline-offset-8 decoration-indigo-200">The Landmark Collection</span>
                <h2 className="text-7xl font-prestige text-slate-900 leading-tight">Architectural Excellence <br />Meets Digital Precision.</h2>
             </div>
-            <div className="pb-4">
-               <button className="w-20 h-20 bg-white rounded-full flex items-center justify-center text-slate-900 shadow-xl shadow-slate-200/50 hover:bg-slate-900 hover:text-white transition-all">
-                  <Play size={24} fill="currentColor" />
-               </button>
-            </div>
          </div>
-         
          <div className="grid lg:grid-cols-2 h-[1600px] gap-6 px-6">
             <div className="flex flex-col gap-6">
                <div className="h-[900px] rounded-[4rem] overflow-hidden relative group">
