@@ -6,6 +6,8 @@ import Dashboard from './pages/Dashboard';
 import UserManagement from './pages/UserManagement';
 import Notifications from './pages/Notifications';
 import ProtectedRoute from './components/ProtectedRoute';
+import OAuthSuccess from './pages/OAuthSuccess';
+
 
 function App() {
   const { user } = useAuth();
@@ -25,6 +27,7 @@ function App() {
       } />
       <Route path="/" element={<Navigate to="/dashboard" />} />
       <Route path="*" element={<Navigate to="/dashboard" />} />
+      <Route path="/oauth-success" element={<OAuthSuccess />} />
     </Routes>
   );
 }
