@@ -86,4 +86,19 @@ public class MongoUserService implements UserService {
     public List<User> getManagers() {
         return userRepository.findByRole(Role.MANAGER);
     }
+
+    @Override
+    public User save(User user) {
+        return userRepository.save(user);
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return userRepository.existsByEmail(email);
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
 }

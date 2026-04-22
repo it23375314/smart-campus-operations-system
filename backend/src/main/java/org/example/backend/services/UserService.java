@@ -12,4 +12,7 @@ public interface UserService {
     void deleteUser(String id);
     UserResponse deactivateUser(String id);
     List<User> getManagers();
-}
+    User save(User user);
+    boolean existsByEmail(String email);
+    User findByEmail(String email);
+}

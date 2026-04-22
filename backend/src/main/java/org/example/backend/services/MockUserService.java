@@ -98,4 +98,24 @@ public class MockUserService implements UserService {
     public List<User> getManagers() {
         return mockUsers.stream().filter(u -> u.getRole() == Role.MANAGER || u.getRole() == Role.ADMIN).collect(Collectors.toList());
     }
+
+    @Override
+    public User save(User user) {
+        if (user.getId() == null) {
+            user.setId("Mock-" + (mockUsers.size() + 1));
+        }
+        mockUsers.removeIf(u -> u.getId().equals(user.getId()));
+        mockUsers.add(user);
+        return user;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return mockUsers.stream().anyMatch(u -> u.getEmail().equals(email));
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return mockUsers.stream().filter(u -> u.getEmail().equals(email)).findFirst().orElse(null);
+    }
 }
