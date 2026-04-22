@@ -19,7 +19,9 @@ import {
   ListChecks,
   LineChart,
   Activity,
-  AlertCircle
+  AlertCircle,
+  Wrench,
+  ClipboardList
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -52,12 +54,18 @@ const Navbar = () => {
     if (!user) return []; // Guest handled via "user ?" logic in UI
 
     switch(user.role) {
+      case 'TECHNICIAN':
+        return [
+          { path: '/technician', label: 'My Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/technician/tickets', label: 'My Tickets', icon: <ClipboardList size={18} /> },
+        ];
       case 'ADMIN':
         // ✅ 4. ADMIN Navbar
         return [
           { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
           { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
+          { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
         ];
       case 'MANAGER':
         // ✅ 5. MANAGER Navbar
@@ -75,7 +83,14 @@ const Navbar = () => {
     }
   };
 
-  const navItems = [...commonItems, ...getRoleItems()];
+  const roleItems = getRoleItems();
+  const commonItemsForRole = user?.role === 'ADMIN'
+    ? commonItems.filter((item) => item.path !== '/about')
+    : commonItems;
+
+  const navItems = user?.role === 'TECHNICIAN'
+    ? roleItems
+    : [...commonItemsForRole, ...roleItems];
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
@@ -131,7 +146,7 @@ const Navbar = () => {
               <motion.div 
                 whileHover={{ rotate: 5 }}
                 className={`p-2.5 rounded-xl text-white shadow-lg ${
-                  user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-600'
+                  user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-600' : 'bg-indigo-600'
                 }`}
               >
                 <UserCircle size={22} />
@@ -140,7 +155,7 @@ const Navbar = () => {
                 <div className="text-sm font-black leading-none mb-1 transition-colors text-slate-900">{user.username}</div>
                 <div className="flex items-center gap-1.5">
                    <div className={`w-1.5 h-1.5 rounded-full ${
-                    user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-500'
+                    user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-500' : 'bg-indigo-500'
                    }`} />
                    <span className="text-[10px] font-black uppercase tracking-widest transition-colors text-slate-400">{user.role}</span>
                 </div>

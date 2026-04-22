@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   AlertCircle, Search, Filter, FileText, Plus, Clock,
   X, Loader2, CheckCircle, XCircle, CircleDot, Zap,
-  Tag, RefreshCw, ChevronRight
+  Tag, RefreshCw, ChevronRight, MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -75,7 +75,6 @@ const MyIncidents = () => {
       .then(data => {
         const all = Array.isArray(data) ? data : [];
         let myIncidentIds = [];
-        let registrationNumber = '';
         let email = '';
         let reportedBy = '';
 
@@ -83,7 +82,6 @@ const MyIncidents = () => {
           const rawIds = localStorage.getItem('scos.myIncidentIds');
           const parsedIds = rawIds ? JSON.parse(rawIds) : [];
           myIncidentIds      = Array.isArray(parsedIds) ? parsedIds : [];
-          registrationNumber = localStorage.getItem('scos.registrationNumber') || '';
           email              = localStorage.getItem('scos.email') || '';
           reportedBy         = localStorage.getItem('scos.reportedBy') || '';
         } catch { /* ignore */ }
@@ -92,8 +90,6 @@ const MyIncidents = () => {
         if (myIncidentIds.length > 0) {
           const idSet = new Set(myIncidentIds);
           myTickets = all.filter(t => idSet.has(t?.id));
-        } else if (registrationNumber) {
-          myTickets = all.filter(t => String(t?.registrationNumber ?? '') === registrationNumber);
         } else if (email) {
           const wanted = safeLower(email);
           myTickets = all.filter(t => safeLower(t?.email) === wanted);
@@ -286,6 +282,12 @@ const MyIncidents = () => {
                           <div className="flex items-center gap-2">
                             <AlertCircle size={14} className="text-slate-300" />
                             <span>{incident.category}</span>
+                          </div>
+                        )}
+                        {incident.resource && (
+                          <div className="flex items-center gap-2">
+                            <MapPin size={14} className="text-slate-300" />
+                            <span>{incident.resource}</span>
                           </div>
                         )}
                       </div>

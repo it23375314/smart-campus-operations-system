@@ -17,15 +17,16 @@ export default function CreateIncident() {
   // Form State
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [registrationNumber, setRegistrationNumber] = useState('');
   const [faculty, setFaculty] = useState('');
   const [contactNumber, setContactNumber] = useState('');
+  const [contactMethod, setContactMethod] = useState('Phone');
   const [subject, setSubject] = useState('');
   const [campus, setCampus] = useState('Malabe Campus');
   const [resource, setResource] = useState('');
   const [category, setCategory] = useState('');
   const [priority, setPriority] = useState('Medium');
   const [message, setMessage] = useState('');
+  const [messageError, setMessageError] = useState('');
   
   // File Upload State
   const [proofFiles, setProofFiles] = useState([]);
@@ -47,6 +48,7 @@ export default function CreateIncident() {
     const handleEditableInput = () => {
       const html = editorElementRef.current?.innerHTML ?? '';
       setMessage(html);
+      if (messageError) setMessageError('');
     };
 
     mediumEditorRef.current.subscribe('editableInput', handleEditableInput);
@@ -72,6 +74,15 @@ export default function CreateIncident() {
       el.innerHTML = desired;
     }
   }, [message]);
+
+  const stripHtmlToText = (v) => {
+    if (!v) return '';
+    let str = String(v);
+    str = str.replace(/<br\s*[\/]?>/gi, '\n');
+    str = str.replace(/<[^>]*>/g, '');
+    str = str.replace(/[ \t]+/g, ' ');
+    return str.trim();
+  };
 
   const readFileAsDataUrl = (file) => {
     return new Promise((resolve, reject) => {
@@ -116,7 +127,7 @@ export default function CreateIncident() {
   };
 
   const handleReset = () => {
-    setName(''); setEmail(''); setRegistrationNumber(''); setFaculty('');
+    setName(''); setEmail(''); setFaculty('');
     setContactNumber(''); setSubject(''); setCampus('Malabe Campus'); setResource('');
     setCategory(''); setPriority('Medium'); setMessage('');
     setProofFiles([]); setFileError(''); setSubmitStatus({ type: '', message: '' });
@@ -131,13 +142,30 @@ export default function CreateIncident() {
         return;
     }
 
+    // Validate preferred contact method detail
+    if (contactMethod === 'Email' && !email) {
+      setSubmitStatus({ type: 'error', message: 'Please provide your Email as preferred contact method.' });
+      return;
+    }
+    if ((contactMethod === 'Phone' || contactMethod === 'WhatsApp') && !contactNumber) {
+      setSubmitStatus({ type: 'error', message: 'Please provide your Contact Number as preferred contact method.' });
+      return;
+    }
+
+    // Description validation
+    const descText = stripHtmlToText(message);
+    if (!descText || descText.length < 20) {
+      setMessageError('Please provide a detailed description (at least 20 characters).');
+      setIsSubmitting(false);
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       const base64Files = await Promise.all(proofFiles.map(readFileAsDataUrl));
 
       try {
-        localStorage.setItem('scos.registrationNumber', registrationNumber);
         if (email) localStorage.setItem('scos.email', email);
         if (name) localStorage.setItem('scos.reportedBy', name);
       } catch {
@@ -147,9 +175,10 @@ export default function CreateIncident() {
       const newIncident = {
         reportedBy: name,
         email: email,
-        registrationNumber: registrationNumber,
         faculty: faculty,
         contactNumber: contactNumber,
+        contactMethod: contactMethod,
+        contactDetail: contactMethod === 'Email' ? email : contactNumber,
         title: subject,
         campus: campus,
         resource: resource,
@@ -246,15 +275,8 @@ export default function CreateIncident() {
             </div>
           </div>
 
-          {/* Registration Number & Faculty Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-1.5">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Registration Number *</label>
-              <input
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                type="text" value={registrationNumber} onChange={(e) => setRegistrationNumber(e.target.value)} required
-              />
-            </div>
+          {/* Faculty / School Row */}
+          <div className="grid grid-cols-1 gap-6">
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Faculty / School *</label>
               <select
@@ -275,11 +297,25 @@ export default function CreateIncident() {
           {/* Contact Number & Campus Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-1.5">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Contact Number *</label>
-              <input
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
-                type="tel" value={contactNumber} onChange={(e) => setContactNumber(e.target.value)} required
-              />
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Preferred Contact Method *</label>
+              <div className="flex items-center gap-3">
+                <select
+                  className="w-1/2 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all appearance-none"
+                  value={contactMethod}
+                  onChange={(e) => setContactMethod(e.target.value)}
+                >
+                  <option value="Phone">Phone</option>
+                  <option value="Email">Email</option>
+                  <option value="WhatsApp">WhatsApp</option>
+                </select>
+                <input
+                  className="flex-1 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                  type={contactMethod === 'Email' ? 'email' : 'tel'}
+                  value={contactMethod === 'Email' ? email : contactNumber}
+                  onChange={(e) => contactMethod === 'Email' ? setEmail(e.target.value) : setContactNumber(e.target.value)}
+                  placeholder={contactMethod === 'Email' ? 'Your email address' : contactMethod === 'WhatsApp' ? 'WhatsApp number (with country code)' : 'Contact number'}
+                />
+              </div>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Campus / Center *</label>
@@ -370,6 +406,18 @@ export default function CreateIncident() {
                 className="w-full p-4 outline-none text-sm text-slate-900 min-h-[200px] cursor-text font-medium"
               />
             </div>
+            <AnimatePresence>
+              {messageError && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="mt-3 p-3 rounded-2xl bg-rose-50 text-rose-700 border border-rose-100 text-sm font-medium"
+                >
+                  {messageError}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Add Attachment */}
@@ -453,4 +501,4 @@ export default function CreateIncident() {
       </motion.div>
     </div>
   );
-}
+}

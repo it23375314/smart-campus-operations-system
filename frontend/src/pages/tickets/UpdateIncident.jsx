@@ -93,7 +93,7 @@ const UpdateIncident = () => {
     const assignedTech = technicians.find(t => t.id === selectedTechId);
     const existingRemarks = incident.remarksHistory || [];
     const updatedRemarks = newRemark
-      ? [...existingRemarks, `${new Date().toLocaleDateString()} - Admin: ${newRemark}`]
+      ? [...existingRemarks, `[${new Date().toLocaleString()}] Admin Note: ${newRemark}`]
       : existingRemarks;
 
     const payload = {
@@ -218,7 +218,6 @@ const UpdateIncident = () => {
                 <InfoRow icon={User}         label="Name"       value={incident.reportedBy} />
                 <InfoRow icon={Mail}         label="Email"      value={incident.email} />
                 <InfoRow icon={Phone}        label="Phone"      value={incident.contactNumber} />
-                <InfoRow icon={Hash}         label="Reg No."    value={incident.registrationNumber} />
                 <InfoRow icon={GraduationCap} label="Faculty"  value={incident.faculty} />
                 <InfoRow icon={Building2}    label="Campus"     value={incident.campus} />
               </div>
@@ -399,14 +398,14 @@ const UpdateIncident = () => {
             <motion.div
               initial={{ scale: 0.85 }} animate={{ scale: 1 }} exit={{ scale: 0.85 }}
               transition={{ type: 'spring', damping: 20 }}
-              className="relative max-w-4xl w-full flex justify-center"
+              className="relative max-w-4xl w-full flex flex-col justify-center pt-10"
               onClick={e => e.stopPropagation()}
             >
               <button
-                className="absolute -top-12 right-0 p-2 text-white/70 hover:text-white bg-white/10 rounded-full transition"
+                className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
                 onClick={() => setSelectedImage(null)}
               >
-                <X size={22} />
+                <X size={13} /> Close
               </button>
               <img src={selectedImage} alt="Enlarged Proof"
                 className="max-w-full max-h-[85vh] object-contain rounded-2xl shadow-2xl" />

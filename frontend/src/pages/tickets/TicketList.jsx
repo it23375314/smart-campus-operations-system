@@ -103,7 +103,7 @@ const TicketList = () => {
           <p className="text-slate-500 font-medium">Overview of all reported campus resource incidents.</p>
         </div>
         <Link
-          to="/technicians"
+          to="/technician-management"
           className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 active:scale-95"
         >
           <Users size={15} />

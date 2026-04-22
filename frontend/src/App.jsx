@@ -10,6 +10,10 @@ import CreateIncident from './pages/tickets/CreateIncident';
 import IncidentDetails from './pages/tickets/IncidentDetails';
 import UpdateIncident from './pages/tickets/UpdateIncident';
 import TicketList from './pages/tickets/TicketList';
+import TechnicianManagement from './pages/tickets/TechnicianManagement';
+import TechnicianDashboard from './pages/technician/TechnicianDashboard';
+import TechnicianTickets from './pages/technician/TechnicianTickets';
+import TechnicianTicketDetail from './pages/technician/TechnicianTicketDetail';
 
 import AvailabilityView from './pages/AvailabilityView';
 import AboutPage from './pages/AboutPage';
@@ -90,7 +94,31 @@ function App() {
                 <TicketList />
               </ProtectedRoute>
             } />
+
+            {/* Technician Management: Admin manages technician staff */}
+            <Route path="/technician-management" element={
+              <ProtectedRoute allowedRoles={['ADMIN', 'TECHNICIAN']}>
+                <TechnicianManagement />
+              </ProtectedRoute>
+            } />
             
+            {/* Technician Dashboard */}
+            <Route path="/technician" element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <TechnicianDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/technician/tickets" element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <TechnicianTickets />
+              </ProtectedRoute>
+            } />
+            <Route path="/technician/ticket/:id" element={
+              <ProtectedRoute allowedRoles={['TECHNICIAN']}>
+                <TechnicianTicketDetail />
+              </ProtectedRoute>
+            } />
+
             {/* Admin panel: sidebar layout wraps all /admin/* routes */}
             <Route
               path="/admin"

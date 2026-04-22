@@ -23,6 +23,8 @@ public class Incident {
     private String contactNumber;
     private String title; // Maps to "Subject"
     private String campus;
+    private String category;
+    private String resource;
     private String description; // Maps to "Message"
     
     private LocalDate dateReported;
@@ -68,6 +70,12 @@ public class Incident {
 
     public String getTitle() { return title; }
     public void setTitle(String title) { this.title = title; }
+
+    public String getCategory() { return category; }
+    public void setCategory(String category) { this.category = category; }
+
+    public String getResource() { return resource; }
+    public void setResource(String resource) { this.resource = resource; }
 
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }

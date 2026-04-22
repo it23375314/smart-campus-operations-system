@@ -17,7 +17,13 @@ import autoTable from 'jspdf-autotable';
 
 const stripHtmlToText = (v) => {
   if (!v) return '';
-  return String(v).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim();
+  let str = String(v);
+  str = str.replace(/<br\s*[\/]?>/gi, '\n');
+  str = str.replace(/<\/p>/gi, '\n\n');
+  str = str.replace(/<[^>]*>/g, '');
+  str = str.replace(/[ \t]+/g, ' ');
+  str = str.replace(/\n\s*\n\s*\n/g, '\n\n');
+  return str.trim();
 };
 const getRef  = (i) => i?.referenceId || i?.id || '—';
 const getInit = (name) => {
@@ -205,45 +211,184 @@ const IncidentDetails = () => {
     if (!incident) return;
     const doc = new jsPDF();
     const ref = getRef(incident);
-    let y = 20;
-    doc.setFontSize(16); doc.setFont('helvetica', 'bold');
-    const title = doc.splitTextToSize(incident.title, 180);
-    doc.text(title, 14, y); y += (title.length * 6) + 5;
+    const pdfCreatedAt = new Date();
+    const pdfCreatedAtStr = pdfCreatedAt.toLocaleString(undefined, {
+      year: 'numeric',
+      month: 'short',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+    const primaryColor = [79, 70, 229]; // Indigo-600
+    const textColor = [51, 65, 85]; // Slate-700
+    const lightGray = [248, 250, 252]; // Slate-50
+    const borderColor = [226, 232, 240]; // Slate-200
+    
+    let y = 15;
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const margin = 14;
+
+    // --- Helper to check page break ---
+    const checkPageBreak = (neededHeight) => {
+      if (y + neededHeight > 280) {
+        doc.addPage();
+        y = 20;
+        addHeader(false);
+      }
+    };
+
+    // --- Header ---
+    const addHeader = (isFirstPage = true) => {
+      doc.setFillColor(...primaryColor);
+      doc.rect(0, 0, pageWidth, 25, 'F');
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text('SmartCampus', margin, 16);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Excellence Portal - Incident Report', margin + 45, 16);
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Ticket #${ref}`, pageWidth - margin, 16, { align: 'right' });
+
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`PDF Created: ${pdfCreatedAtStr}`, pageWidth - margin, 21, { align: 'right' });
+      if (!isFirstPage) y = 35;
+    };
+
+    addHeader(true);
+    y = 35;
+
+    // --- Ticket Title ---
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    const titleLines = doc.splitTextToSize(incident.title, pageWidth - 2 * margin);
+    doc.text(titleLines, margin, y);
+    y += (titleLines.length * 7) + 5;
+
+    // --- Metadata Card (using autoTable) ---
     autoTable(doc, {
-      startY: y, theme: 'grid',
-      styles: { fontSize: 10, cellPadding: 3, font: 'helvetica' },
-      columnStyles: { 0: { fontStyle: 'bold', fillColor: [245,245,245], cellWidth: 50 } },
+      startY: y,
+      theme: 'grid',
+      head: [['Ticket Information', 'Reporter Details']],
+      headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold', fontSize: 11 },
       body: [
-        ['Ticket Ref', ref], ['Status', incident.status], ['Created', fmtDate(incident)],
-        ['User', `${incident.reportedBy} <${incident.email || 'N/A'}>`],
-        ['Agent', incident.assignedTechnicianName || '—'],
-        ['Faculty', incident.faculty || '—'], ['Campus', incident.campus || '—'],
-        ['Reg No.', incident.registrationNumber || '—'], ['Contact', incident.contactNumber || '—'],
+        [
+          `Status: ${incident.status}\nPriority: ${incident.priority || 'Medium'}\nCategory: ${incident.category || '—'}\nTicket Created: ${fmtDate(incident)}\nPDF Created: ${pdfCreatedAtStr}\nAssigned: ${incident.assignedTechnicianName || 'Unassigned'}`,
+          `Name: ${incident.reportedBy}\nEmail: ${incident.email || '—'}\nPhone: ${incident.contactNumber || '—'}\nFaculty: ${incident.faculty || '—'}\nCampus: ${incident.campus || '—'}`
+        ]
       ],
-      didDrawPage: (d) => { y = d.cursor.y + 15; },
+      styles: { fontSize: 10, cellPadding: 5, textColor: textColor, valign: 'top', lineColor: borderColor, lineWidth: 0.1 },
+      columnStyles: { 0: { cellWidth: (pageWidth - 2 * margin) / 2 }, 1: { cellWidth: (pageWidth - 2 * margin) / 2 } },
+      didDrawPage: (data) => {
+          if(data.pageNumber > 1) { y = data.cursor.y + 10; addHeader(false); }
+      },
     });
-    const chk = (n) => { if (y + n > 280) { doc.addPage(); y = 20; } };
-    chk(30);
-    doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-    doc.text('Message #1', 14, y); y += 6;
-    doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-    doc.text(`By ${incident.reportedBy} at ${fmtDate(incident)}`, 14, y); y += 8;
-    const desc = doc.splitTextToSize(stripHtmlToText(incident.description), 180);
-    doc.text(desc, 14, y); y += (desc.length * 5) + 15;
-    incident.remarksHistory?.forEach((remark, i) => {
-      const isStud = remark.includes('- Student:');
-      const parts  = remark.split(': ');
-      const msg    = parts.slice(1).join(': ');
-      const author = isStud ? incident.reportedBy : (incident.assignedTechnicianName || 'Agent');
-      const date   = parts[0].split(' - ')[0];
-      const split  = doc.splitTextToSize(msg, 180);
-      chk((split.length * 5) + 20);
-      doc.setFontSize(12); doc.setFont('helvetica', 'bold');
-      doc.text(`Message #${i + 2}`, 14, y); y += 6;
-      doc.setFontSize(10); doc.setFont('helvetica', 'normal');
-      doc.text(`By ${author} at ${date}`, 14, y); y += 8;
-      doc.text(split, 14, y); y += (split.length * 5) + 15;
-    });
+
+    if (doc.lastAutoTable) {
+        y = doc.lastAutoTable.finalY + 15;
+    }
+
+    // --- Description ---
+    checkPageBreak(40);
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Issue Description', margin, y);
+    y += 8;
+
+    const descBoxY = y;
+    doc.setTextColor(...textColor);
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    let cleanDesc = stripHtmlToText(incident.description);
+    const descLines = doc.splitTextToSize(cleanDesc || 'No description provided.', pageWidth - 2 * margin - 10);
+    const descHeight = Math.max((descLines.length * 4.5) + 8, 15); // Minimum height
+
+    doc.setFillColor(...lightGray);
+    doc.setDrawColor(...borderColor);
+    doc.rect(margin, descBoxY, pageWidth - 2 * margin, descHeight, 'FD');
+    doc.text(descLines, margin + 5, descBoxY + 7);
+    y = descBoxY + descHeight + 15;
+
+    // --- Remarks / Conversation Thread ---
+    checkPageBreak(30);
+    doc.setTextColor(...primaryColor);
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Conversation History', margin, y);
+    y += 10;
+
+    if (!incident.remarksHistory || incident.remarksHistory.length === 0) {
+      doc.setTextColor(148, 163, 184); // slate-400
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.text('No remarks recorded yet.', margin, y);
+      y += 10;
+    } else {
+      incident.remarksHistory.forEach((remark, i) => {
+        const isStud = remark.includes('- Student:') || remark.includes('- User:');
+        const isAdmin = remark.includes('Admin Note:');
+        const parts  = remark.split(': ');
+        let msg    = parts.slice(1).join(': ');
+        if(!msg && parts.length > 0) msg = remark; // fallback
+        
+        const author = isAdmin ? 'Administrator' : (isStud ? incident.reportedBy : (incident.assignedTechnicianName || 'Support Agent'));
+        const dateMatch = remark.match(/^(.+?) - /);
+        const dateStr = dateMatch ? dateMatch[1] : '';
+        const role = isAdmin ? 'Admin' : (isStud ? 'Reporter' : 'Technician');
+        
+        const isTech = !isStud && !isAdmin;
+        const bubbleFill = isAdmin ? [254, 243, 224] : isTech ? [238, 242, 255] : [248, 250, 252]; // Amber-50 vs Indigo-50 vs Slate-50
+        const bubbleBorder = isAdmin ? [253, 224, 71] : isTech ? [199, 210, 254] : [226, 232, 240]; // Amber-300 vs Indigo-200 vs Slate-200
+        const indentX = (isTech || isAdmin) ? margin + 20 : margin;
+        const msgWidth = pageWidth - 2 * margin - 20;
+
+        const msgLines = doc.splitTextToSize(msg.trim(), msgWidth - 10);
+        const msgHeight = (msgLines.length * 4.5) + 10;
+
+        checkPageBreak(msgHeight + 15);
+
+        // Header line (Author & Date)
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.setTextColor(isAdmin ? 180 : isTech ? 79 : 71, isAdmin ? 120 : isTech ? 70 : 85, isAdmin ? 60 : isTech ? 229 : 105); // Amber, Indigo or slate
+        doc.text(`${author} (${role})`, indentX, y);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(148, 163, 184); // slate-400
+        doc.text(dateStr, indentX + msgWidth, y, { align: 'right' });
+        y += 4;
+
+        // Bubble
+        doc.setFillColor(...bubbleFill);
+        doc.setDrawColor(...bubbleBorder);
+        doc.roundedRect(indentX, y, msgWidth, msgHeight, 2, 2, 'FD');
+        
+        doc.setTextColor(...textColor);
+        doc.setFontSize(10);
+        doc.text(msgLines, indentX + 5, y + 6);
+        
+        y += msgHeight + 10;
+      });
+    }
+
+    // --- Footer with Page Numbers ---
+    const pageCount = doc.internal.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, 285, pageWidth - margin, 285);
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text('SmartCampus Operations System', margin, 290);
+      doc.text(`Page ${i} of ${pageCount}`, pageWidth - margin, 290, { align: 'right' });
+    }
+
     doc.save(`Ticket_${ref}.pdf`);
   };
 
@@ -417,11 +562,13 @@ const IncidentDetails = () => {
                     {comments.map((comment, idx) => {
                       const remark    = comment.text;
                       const isStudent = remark.includes('- Student:') || remark.includes('- User:');
+                      const isAdmin   = remark.includes('Admin Note:');
                       const isReporter= isStudent && (currentUserEmail === incident?.email || currentUserEmail === incident?.reportedBy);
                       const parts     = remark.split(': ');
                       const message   = parts.slice(1).join(': ');
-                      const author    = isStudent ? incident.reportedBy : (incident.assignedTechnicianName || 'Support Agent');
+                      const author    = isAdmin ? 'Administrator' : (isStudent ? incident.reportedBy : (incident.assignedTechnicianName || 'Support Agent'));
                       const dateStr   = parts[0].split(' - ')[0];
+                      const role      = isAdmin ? 'Admin' : (isStudent ? 'Reporter' : 'Technician');
 
                       return (
                         <motion.div
@@ -433,22 +580,23 @@ const IncidentDetails = () => {
                           className={`relative sm:pl-12 ${isStudent ? '' : ''}`}
                         >
                           {/* Timeline dot */}
-                          <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 border-white shadow-sm hidden sm:block ${isStudent ? 'bg-blue-400' : 'bg-indigo-500'}`} />
+                          <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 border-white shadow-sm hidden sm:block ${isStudent ? 'bg-blue-400' : isAdmin ? 'bg-amber-500' : 'bg-indigo-500'}`} />
 
-                          <div className={`glass-card bg-white border overflow-hidden ${isStudent ? 'border-slate-100 ml-0 md:ml-6' : 'border-indigo-100 mr-0 md:mr-6'} shadow-sm`}>
+                          <div className={`glass-card bg-white border overflow-hidden ${isStudent ? 'border-slate-100 ml-0 md:ml-6' : isAdmin ? 'border-amber-100 mr-0 md:mr-6' : 'border-indigo-100 mr-0 md:mr-6'} shadow-sm`}>
                             {/* Left accent */}
-                            {!isStudent && <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-600" />}
+                            {!isStudent && !isAdmin && <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-600" />}
+                            {isAdmin && <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-500 to-orange-600" />}
 
                             {/* Header */}
-                            <div className={`flex items-center justify-between px-5 py-3 border-b border-slate-50 ${!isStudent ? 'pl-6 bg-indigo-50/30' : 'bg-slate-50/50'}`}>
+                            <div className={`flex items-center justify-between px-5 py-3 border-b border-slate-50 ${isStudent ? 'bg-slate-50/50' : isAdmin ? 'bg-amber-50/30' : 'pl-6 bg-indigo-50/30'}`}>
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm ${isStudent ? 'bg-blue-100 text-blue-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                  {isStudent ? getInit(incident.reportedBy) : <Shield size={13} />}
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm ${isStudent ? 'bg-blue-100 text-blue-600' : isAdmin ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                  {isStudent ? getInit(incident.reportedBy) : isAdmin ? <Shield size={13} /> : <Shield size={13} />}
                                 </div>
                                 <div>
                                   <p className="text-sm font-black text-slate-900">{author}</p>
                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {isStudent ? 'Reporter' : 'Technician'}
+                                    {role}
                                   </p>
                                 </div>
                               </div>
@@ -456,7 +604,7 @@ const IncidentDetails = () => {
                                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
                                   <Clock size={10} /> {dateStr}
                                 </span>
-                                {isReporter && editingCommentId !== comment.id && (
+                                {isReporter && editingCommentId !== comment.id && !isAdmin && (
                                   <div className="flex items-center gap-0.5">
                                     <button
                                       type="button"
@@ -511,7 +659,7 @@ const IncidentDetails = () => {
                                 </div>
                               </div>
                             ) : (
-                              <div className={`px-5 py-4 text-sm text-slate-700 leading-relaxed ${!isStudent ? 'pl-6' : ''}`}>
+                              <div className={`px-5 py-4 text-sm text-slate-700 leading-relaxed ${!isStudent && !isAdmin ? 'pl-6' : isAdmin ? 'pl-6' : ''}`}>
                                 {message}
                               </div>
                             )}
@@ -624,7 +772,6 @@ const IncidentDetails = () => {
                 </MetaItem>
                 <MetaItem icon={Tag}          label="Category"          value={incident.category} />
                 <MetaItem icon={MapPin}       label="Resource"          value={incident.resource} />
-                <MetaItem icon={Hash}         label="Registration No."  value={incident.registrationNumber} />
                 <MetaItem icon={GraduationCap} label="Faculty"          value={incident.faculty} />
                 <MetaItem icon={Phone}        label="Contact"           value={incident.contactNumber} />
                 <MetaItem icon={Building2}    label="Campus"            value={incident.campus} />
@@ -695,12 +842,12 @@ const IncidentDetails = () => {
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
               transition={{ type: 'spring', damping: 22, stiffness: 300 }}
-              className="relative max-w-4xl w-full flex justify-center pt-10"
+              className="relative max-w-4xl w-full flex flex-col justify-center pt-10"
               onClick={e => e.stopPropagation()}
             >
               <button
                 onClick={() => setSelectedImage(null)}
-                className="absolute -top-8 right-0 flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                className="absolute top-0 right-0 flex items-center gap-2 px-4 py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
               >
                 <X size={13} /> Close
               </button>
