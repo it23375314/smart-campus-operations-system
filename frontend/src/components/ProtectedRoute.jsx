@@ -1,7 +1,7 @@
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children, adminOnly = false }) => {
+const ProtectedRoute = ({ children, adminOnly = false, allowedRoles }) => {
     const { user, loading } = useAuth();
 
     if (loading) {
@@ -16,7 +16,13 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
         return <Navigate to="/login" replace />;
     }
 
+    // Check adminOnly flag
     if (adminOnly && user.role !== 'ADMIN') {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    // Check allowedRoles array (used by teammates)
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
         return <Navigate to="/dashboard" replace />;
     }
 
