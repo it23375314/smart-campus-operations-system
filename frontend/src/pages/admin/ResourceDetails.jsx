@@ -12,7 +12,8 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
-  Package
+  Package,
+  Briefcase
 } from 'lucide-react';
 import axios from 'axios';
 
@@ -149,6 +150,7 @@ const ResourceDetails = () => {
           <div className="mb-6">
             <InfoRow icon={<Tag size={15} />} label="Category" value={resource.category} />
             <InfoRow icon={<Users size={15} />} label="Capacity" value={`${resource.capacity} people`} />
+            <InfoRow icon={<Briefcase size={15} />} label="Assigned Manager" value={resource.managerName || 'No manager assigned'} />
             <InfoRow icon={<Calendar size={15} />} label="Available Days" value={availableDaysLabel} />
             <InfoRow icon={<Clock size={15} />} label="Available Hours" value={availableTimesLabel} />
           </div>
