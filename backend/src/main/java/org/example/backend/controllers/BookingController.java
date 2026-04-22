@@ -16,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/bookings")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class BookingController {
 
     @Autowired
@@ -26,7 +26,7 @@ public class BookingController {
     @PostMapping
     public ResponseEntity<BookingResponseDTO> createBooking(
             @Valid @RequestBody BookingRequestDTO request,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return new ResponseEntity<>(bookingService.createBooking(request, currentUserId, currentUserRole), HttpStatus.CREATED);
     }
@@ -34,7 +34,7 @@ public class BookingController {
     // USER: View own bookings
     @GetMapping("/my")
     public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         if (currentUserRole != Role.USER) {
             throw new ForbiddenException("This endpoint is for students/users only.");
@@ -45,9 +45,9 @@ public class BookingController {
     // ADMIN/MANAGER: View all bookings with optional filtering
     @GetMapping
     public ResponseEntity<List<BookingResponseDTO>> getAllBookings(
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) Long resourceId,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String resourceId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         if (currentUserRole == Role.USER) {
             throw new ForbiddenException("Users cannot access the global bookings list. Use /my instead.");
@@ -58,7 +58,7 @@ public class BookingController {
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponseDTO> getBookingById(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserId, currentUserRole));
     }
@@ -68,7 +68,7 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> updateBooking(
             @PathVariable String id, 
             @Valid @RequestBody BookingRequestDTO request,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.updateBooking(id, request, currentUserId, currentUserRole));
     }
@@ -77,7 +77,7 @@ public class BookingController {
     @PatchMapping("/{id}/approve")
     public ResponseEntity<BookingResponseDTO> approveBooking(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.approveBooking(id, currentUserId, currentUserRole));
     }
@@ -87,7 +87,7 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> rejectBooking(
             @PathVariable String id,
             @RequestParam String reason,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.rejectBooking(id, reason, currentUserId, currentUserRole));
     }
@@ -96,7 +96,7 @@ public class BookingController {
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<BookingResponseDTO> cancelBooking(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.cancelBooking(id, currentUserId, currentUserRole));
     }

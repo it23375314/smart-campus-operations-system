@@ -10,7 +10,8 @@ import {
   XCircle,
   AlertCircle,
   Package,
-  RefreshCw
+  RefreshCw,
+  Briefcase
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
@@ -244,8 +245,8 @@ const ResourceList = () => {
                   Cap: <span className="text-slate-600 font-bold">{resource.capacity}</span>
                 </div>
                 <div className="flex items-center gap-1.5">
-                  <CalendarIcon size={13} className="text-slate-300" />
-                  {resource.availableDays?.length ?? 0} days
+                  <Briefcase size={13} className="text-slate-300" />
+                  {resource.managerName || 'No Manager'}
                 </div>
                 <Link
                   to={`/admin/resources/view/${resource.id}`}

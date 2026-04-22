@@ -25,9 +25,7 @@ const DashboardPage = () => {
   useEffect(() => {
     const fetchStats = async () => {
       try {
-        // We'll call the new stats endpoint we added to the backend
-        const response = await fetch('http://localhost:8080/bookings/stats');
-        const data = await response.json();
+        const data = await bookingService.getStats();
         setStats(data);
       } catch (error) {
         console.error("Error fetching stats:", error);
