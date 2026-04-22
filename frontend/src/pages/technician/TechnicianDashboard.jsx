@@ -4,25 +4,25 @@ import { motion } from 'framer-motion';
 import {
   Wrench, ClipboardList, CheckCircle, Clock, AlertCircle,
   ArrowRight, Zap, TrendingUp, Activity, ListChecks,
-  CircleDot, Loader2, Tag, MapPin, ChevronRight
+  CircleDot, Loader2, Tag, MapPin, ChevronRight, Search, Filter
 } from 'lucide-react';
 
 /* ─── Status config ────────────────────────────────────────── */
 const STATUS_CONFIG = {
-  OPEN:          { label: 'Open',        pill: 'bg-amber-100 text-amber-700 border-amber-200',       bar: 'from-amber-400 to-orange-400',  dot: 'bg-amber-400'   },
-  Pending:       { label: 'Open',        pill: 'bg-amber-100 text-amber-700 border-amber-200',       bar: 'from-amber-400 to-orange-400',  dot: 'bg-amber-400'   },
-  IN_PROGRESS:   { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200',          bar: 'from-blue-500 to-indigo-500',   dot: 'bg-blue-500'    },
-  'In Progress': { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200',          bar: 'from-blue-500 to-indigo-500',   dot: 'bg-blue-500'    },
-  RESOLVED:      { label: 'Resolved',    pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400',  dot: 'bg-emerald-500' },
-  Resolved:      { label: 'Resolved',    pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400',  dot: 'bg-emerald-500' },
-  CLOSED:        { label: 'Closed',      pill: 'bg-slate-100 text-slate-500 border-slate-200',       bar: 'from-slate-300 to-slate-400',   dot: 'bg-slate-400'   },
+  OPEN: { label: 'Open', pill: 'bg-amber-100 text-amber-700 border-amber-200', bar: 'from-amber-400 to-orange-400', dot: 'bg-amber-400' },
+  Pending: { label: 'Open', pill: 'bg-amber-100 text-amber-700 border-amber-200', bar: 'from-amber-400 to-orange-400', dot: 'bg-amber-400' },
+  IN_PROGRESS: { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200', bar: 'from-blue-500 to-indigo-500', dot: 'bg-blue-500' },
+  'In Progress': { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200', bar: 'from-blue-500 to-indigo-500', dot: 'bg-blue-500' },
+  RESOLVED: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400', dot: 'bg-emerald-500' },
+  Resolved: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400', dot: 'bg-emerald-500' },
+  CLOSED: { label: 'Closed', pill: 'bg-slate-100 text-slate-500 border-slate-200', bar: 'from-slate-300 to-slate-400', dot: 'bg-slate-400' },
 };
 
 const PRIORITY_CONFIG = {
   Urgent: 'bg-rose-100 text-rose-700 border-rose-200',
-  High:   'bg-amber-100 text-amber-700 border-amber-200',
+  High: 'bg-amber-100 text-amber-700 border-amber-200',
   Medium: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  Low:    'bg-slate-100 text-slate-500 border-slate-200',
+  Low: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
 /* ─── Stat Card ─────────────────────────────────────────────── */
@@ -104,7 +104,8 @@ const TicketRow = ({ incident, index }) => {
 /* ─── Main Component ─────────────────────────────────────────── */
 const TechnicianDashboard = () => {
   const [incidents, setIncidents] = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const techName = user?.username || 'Technician';
@@ -127,14 +128,20 @@ const TechnicianDashboard = () => {
       .finally(() => setLoading(false));
   }, []);
 
-  const openCount       = incidents.filter(i => i.status === 'OPEN' || i.status === 'Pending').length;
+  const openCount = incidents.filter(i => i.status === 'OPEN' || i.status === 'Pending').length;
   const inProgressCount = incidents.filter(i => i.status === 'IN_PROGRESS' || i.status === 'In Progress').length;
-  const resolvedCount   = incidents.filter(i => i.status === 'RESOLVED' || i.status === 'Resolved').length;
-  const urgentCount     = incidents.filter(i => i.priority === 'Urgent' && (i.status === 'OPEN' || i.status === 'Pending' || i.status === 'IN_PROGRESS' || i.status === 'In Progress')).length;
+  const resolvedCount = incidents.filter(i => i.status === 'RESOLVED' || i.status === 'Resolved').length;
+  const urgentCount = incidents.filter(i => i.priority === 'Urgent' && (i.status === 'OPEN' || i.status === 'Pending' || i.status === 'IN_PROGRESS' || i.status === 'In Progress')).length;
 
-  const recentOpen = incidents
+  const filteredActive = incidents
     .filter(i => i.status === 'OPEN' || i.status === 'Pending' || i.status === 'IN_PROGRESS' || i.status === 'In Progress')
-    .slice(0, 5);
+    .filter(i => {
+      const matchesSearch = i.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        String(i.referenceId || i.id)?.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesSearch;
+    });
+
+  const recentOpen = filteredActive.slice(0, 5);
 
   return (
     <div className="max-w-7xl mx-auto pt-40 pb-16 px-4 space-y-10">
@@ -179,10 +186,10 @@ const TechnicianDashboard = () => {
 
       {/* ── Stats ─────────────────────────── */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Assigned Total"  value={incidents.length}  icon={ClipboardList} gradient="from-indigo-500 to-purple-500"   delay={0.05} sub="All tickets" />
-        <StatCard label="Open / Pending"  value={openCount}          icon={CircleDot}     gradient="from-amber-400 to-orange-400"    delay={0.10} sub="Needs action" />
-        <StatCard label="In Progress"     value={inProgressCount}    icon={Activity}      gradient="from-blue-500 to-indigo-500"     delay={0.15} sub="Active work" />
-        <StatCard label="Resolved"        value={resolvedCount}      icon={CheckCircle}   gradient="from-emerald-400 to-teal-400"    delay={0.20} sub="Completed" />
+        <StatCard label="Assigned Total" value={incidents.length} icon={ClipboardList} gradient="from-indigo-500 to-purple-500" delay={0.05} sub="All tickets" />
+        <StatCard label="Open / Pending" value={openCount} icon={CircleDot} gradient="from-amber-400 to-orange-400" delay={0.10} sub="Needs action" />
+        <StatCard label="In Progress" value={inProgressCount} icon={Activity} gradient="from-blue-500 to-indigo-500" delay={0.15} sub="Active work" />
+        <StatCard label="Resolved" value={resolvedCount} icon={CheckCircle} gradient="from-emerald-400 to-teal-400" delay={0.20} sub="Completed" />
       </div>
 
       {/* ── Active Tickets Table ───────────── */}
@@ -197,7 +204,7 @@ const TechnicianDashboard = () => {
             <TrendingUp size={16} className="text-indigo-500" />
             <span className="text-xs font-black uppercase tracking-widest text-slate-500">
               Active Tickets
-              <span className="ml-2 text-indigo-600">{recentOpen.length}</span>
+              <span className="ml-2 text-indigo-600">{filteredActive.length}</span>
             </span>
           </div>
           <Link
@@ -208,16 +215,35 @@ const TechnicianDashboard = () => {
           </Link>
         </div>
 
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50">
+          <div className="relative w-full">
+            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search active tickets..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-sm"
+            />
+          </div>
+        </div>
+
         {loading ? (
           <div className="flex flex-col items-center justify-center py-16">
             <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3" />
             <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Loading Tickets…</p>
           </div>
-        ) : recentOpen.length === 0 ? (
+        ) : (incidents.filter(i => i.status === 'OPEN' || i.status === 'Pending' || i.status === 'IN_PROGRESS' || i.status === 'In Progress').length === 0) ? (
           <div className="text-center py-16">
             <CheckCircle className="mx-auto text-emerald-200 mb-4" size={48} />
             <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">All clear!</h3>
             <p className="text-slate-400 font-medium mt-1 text-sm">No open tickets at the moment.</p>
+          </div>
+        ) : recentOpen.length === 0 ? (
+          <div className="text-center py-16">
+            <Filter className="mx-auto text-slate-200 mb-4" size={48} />
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No matches</h3>
+            <p className="text-slate-400 font-medium mt-1 text-sm">Try adjusting your search term.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

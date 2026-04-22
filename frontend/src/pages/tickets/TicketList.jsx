@@ -71,6 +71,8 @@ const StatCard = ({ label, count, colorClass, barClass, delay }) => (
 const TicketList = () => {
   const [allIncidents, setAllIncidents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('ALL');
 
   useEffect(() => {
     setLoading(true);
@@ -92,6 +94,23 @@ const TicketList = () => {
   const resolvedCount   = allIncidents.filter(i => i.status === 'Resolved' || i.status === 'RESOLVED').length;
   const closedCount     = allIncidents.filter(i => i.status === 'Closed' || i.status === 'CLOSED').length;
   const rejectedCount   = allIncidents.filter(i => i.status === 'Rejected' || i.status === 'REJECTED').length;
+
+  const filteredIncidents = allIncidents.filter(incident => {
+    const q = search.toLowerCase();
+    const matchesSearch = !q || 
+      incident.title?.toLowerCase().includes(q) || 
+      String(incident.referenceId || incident.id)?.toLowerCase().includes(q) ||
+      incident.reportedBy?.toLowerCase().includes(q);
+    
+    const matchesStatus = statusFilter === 'ALL' || 
+      (statusFilter === 'OPEN' && (incident.status === 'OPEN' || incident.status === 'Pending')) ||
+      (statusFilter === 'IN_PROGRESS' && (incident.status === 'IN_PROGRESS' || incident.status === 'In Progress')) ||
+      (statusFilter === 'RESOLVED' && (incident.status === 'RESOLVED' || incident.status === 'Resolved')) ||
+      (statusFilter === 'CLOSED' && incident.status === 'CLOSED') ||
+      (statusFilter === 'REJECTED' && incident.status === 'REJECTED');
+    
+    return matchesSearch && matchesStatus;
+  });
 
   return (
     <div className="max-w-7xl mx-auto pt-40 pb-12 px-4 space-y-8">
@@ -120,6 +139,43 @@ const TicketList = () => {
         <StatCard label="Rejected"     count={rejectedCount}   colorClass="text-rose-600"    barClass="bg-rose-500"    delay={0.25} />
       </div>
 
+      {/* Filters & Search UI */}
+      <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 md:pb-0 scrollbar-hide w-full md:w-auto">
+          {[
+            { id: 'ALL',         label: 'All',         icon: BarChart3 },
+            { id: 'OPEN',        label: 'Open',        icon: Clock },
+            { id: 'IN_PROGRESS', label: 'In Progress', icon: Loader2 },
+            { id: 'RESOLVED',    label: 'Resolved',    icon: CheckCircle },
+            { id: 'CLOSED',      label: 'Closed',      icon: AlertCircle },
+            { id: 'REJECTED',    label: 'Rejected',    icon: AlertCircle },
+          ].map(f => (
+            <button
+              key={f.id}
+              onClick={() => setStatusFilter(f.id)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-2xl font-black text-[10px] uppercase tracking-widest border transition-all whitespace-nowrap ${
+                statusFilter === f.id 
+                  ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-100' 
+                  : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200'
+              }`}
+            >
+              <f.icon size={12} className={f.id === 'IN_PROGRESS' && statusFilter === f.id ? 'animate-spin' : ''} />
+              {f.label}
+            </button>
+          ))}
+        </div>
+        <div className="relative w-full md:w-80">
+          <BarChart3 size={15} className="absolute left-4 top-3.5 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Search tickets..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-12 pr-4 py-3 bg-white border border-slate-100 rounded-2xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none transition-all shadow-sm"
+          />
+        </div>
+      </div>
+
       {/* Table Card */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -128,12 +184,14 @@ const TicketList = () => {
         className="glass-card bg-white border border-slate-100 overflow-hidden"
       >
         {/* Table header */}
-        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center gap-3">
-          <BarChart3 size={16} className="text-indigo-500" />
-          <span className="text-xs font-black uppercase tracking-widest text-slate-500">
-            All Tickets
-            <span className="ml-2 text-indigo-600">{allIncidents.length}</span>
-          </span>
+        <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/60 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <BarChart3 size={16} className="text-indigo-500" />
+            <span className="text-xs font-black uppercase tracking-widest text-slate-500">
+              Filtered Results
+              <span className="ml-2 text-indigo-600">{filteredIncidents.length}</span>
+            </span>
+          </div>
         </div>
 
         {loading ? (
@@ -141,10 +199,10 @@ const TicketList = () => {
             <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-3" />
             <p className="text-slate-400 font-black uppercase tracking-widest text-xs">Loading Tickets…</p>
           </div>
-        ) : allIncidents.length === 0 ? (
+        ) : filteredIncidents.length === 0 ? (
           <div className="text-center py-16">
             <AlertCircle className="mx-auto text-slate-200 mb-4" size={48} />
-            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No incidents found</h3>
+            <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No incidents match your search</h3>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -159,8 +217,8 @@ const TicketList = () => {
                 </tr>
               </thead>
               <tbody>
-                <AnimatePresence>
-                  {allIncidents.map((incident, index) => {
+                <AnimatePresence mode="popLayout">
+                  {filteredIncidents.map((incident, index) => {
                     const cfg = STATUS_CONFIG[incident.status] || STATUS_CONFIG.OPEN;
                     return (
                       <motion.tr

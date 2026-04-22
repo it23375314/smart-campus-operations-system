@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   Users, Plus, Trash2, ArrowLeft, RefreshCw,
-  Mail, Tag, UserCheck, Loader2
+  Mail, Tag, UserCheck, Loader2, Search, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -20,6 +20,8 @@ const TechnicianManagement = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [category, setCategory] = useState('IT Support');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [activeFilter, setActiveFilter] = useState('ALL');
 
   const fetchTechnicians = () => {
     setLoading(true);
@@ -63,6 +65,15 @@ const TechnicianManagement = () => {
   };
 
   const getInitials = (n) => n?.split(' ').map(x => x[0]).join('').substring(0, 2).toUpperCase() || '?';
+
+  const filteredTechnicians = technicians.filter(tech => {
+    const matchesSearch = tech.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          tech.email.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCategory = activeFilter === 'ALL' || tech.category === activeFilter;
+    return matchesSearch && matchesCategory;
+  });
+
+  const categories = ['ALL', 'IT Support', 'Electrical', 'Maintenance', 'Network'];
 
   return (
     <div className="max-w-6xl mx-auto pt-40 pb-12 px-4 space-y-8">
@@ -160,8 +171,39 @@ const TechnicianManagement = () => {
               </div>
               <div>
                 <h2 className="text-base font-black text-slate-900">Support Staff</h2>
-                <p className="text-xs text-slate-400 font-medium">{technicians.length} member{technicians.length !== 1 ? 's' : ''} registered</p>
+                <p className="text-xs text-slate-400 font-medium">
+                  {filteredTechnicians.length} of {technicians.length} member{technicians.length !== 1 ? 's' : ''}
+                </p>
               </div>
+            </div>
+          </div>
+
+          {/* Search & Filter Bar */}
+          <div className="px-6 py-4 border-b border-slate-100 bg-slate-50/50 flex flex-col sm:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Search by name or email..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all shadow-sm"
+              />
+            </div>
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 sm:pb-0 no-scrollbar">
+              {categories.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveFilter(cat)}
+                  className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
+                    activeFilter === cat
+                      ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-indigo-200 hover:text-indigo-600'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
           </div>
 
@@ -173,13 +215,23 @@ const TechnicianManagement = () => {
           ) : technicians.length === 0 ? (
             <div className="text-center py-16">
               <Users className="mx-auto text-slate-200 mb-4" size={48} />
-              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No technicians yet</h3>
-              <p className="text-slate-400 font-medium mt-1 text-sm">Add your first staff member using the form.</p>
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No technicians found</h3>
+              <p className="text-slate-400 font-medium mt-1 text-sm">
+                {technicians.length === 0 
+                  ? 'Add your first staff member using the form.' 
+                  : 'Try adjusting your search or filters.'}
+              </p>
+            </div>
+          ) : filteredTechnicians.length === 0 ? (
+            <div className="text-center py-16">
+              <Filter className="mx-auto text-slate-200 mb-4" size={48} />
+              <h3 className="text-base font-black text-slate-800 uppercase tracking-tight">No matches</h3>
+              <p className="text-slate-400 font-medium mt-1 text-sm">No technicians match your current criteria.</p>
             </div>
           ) : (
             <ul className="divide-y divide-slate-100">
-              <AnimatePresence>
-                {technicians.map((tech, index) => (
+              <AnimatePresence mode="popLayout">
+                {filteredTechnicians.map((tech, index) => (
                   <motion.li
                     key={tech.id}
                     initial={{ opacity: 0, y: 8 }}

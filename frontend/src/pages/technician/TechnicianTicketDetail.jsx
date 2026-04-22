@@ -6,7 +6,7 @@ import {
   XCircle, Clock, Tag, User, MapPin, Phone, GraduationCap,
   Building2, Hash, Zap, Calendar, MessageSquare, Send,
   Shield, AlertCircle, FileText, Paperclip, X, CircleDot,
-  CheckSquare
+  CheckSquare, Pencil, Trash2
 } from 'lucide-react';
 
 /* ─── Helpers ──────────────────────────────────────────────── */
@@ -19,6 +19,28 @@ const fmtDate   = (incident) => {
   const d = new Date(raw);
   if (isNaN(d)) return String(raw);
   return d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+};
+const parseCommentDateTime = (remark) => {
+  if (!remark) return { dateStr: '—', timeStr: '' };
+  let timestamp = null;
+  const match = remark.match(/^\[(.*?)\]\s*/);
+  if (match) {
+    timestamp = match[1];
+  } else {
+    const dashMatch = remark.match(/^(.+?)\s+-\s+/);
+    if (dashMatch) timestamp = dashMatch[1];
+  }
+  if (!timestamp) return { dateStr: '—', timeStr: '' };
+  try {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return { dateStr: timestamp, timeStr: '' };
+    const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+    const hasTime = timestamp.includes('T') || timestamp.includes(':') || /am|pm/i.test(timestamp);
+    const timeStr = hasTime ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+    return { dateStr, timeStr };
+  } catch {
+    return { dateStr: timestamp, timeStr: '' };
+  }
 };
 
 /* ─── Status config ─────────────────────────────────────────── */
@@ -72,6 +94,8 @@ const TechnicianTicketDetail = () => {
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [selectedImage, setSelectedImage] = useState(null);
   const [replyFocused, setReplyFocused]   = useState(false);
+  const [editingIndex, setEditingIndex]   = useState(null);
+  const [editingText, setEditingText]     = useState('');
 
   const user     = JSON.parse(localStorage.getItem('user') || '{}');
   const techName = user?.username || 'Technician';
@@ -106,7 +130,7 @@ const TechnicianTicketDetail = () => {
 
     const existingRemarks = incident.remarksHistory || [];
     const updatedRemarks  = resolutionNote.trim()
-      ? [...existingRemarks, `${new Date().toLocaleDateString()} - Technician: ${resolutionNote.trim()}`]
+      ? [...existingRemarks, `[${new Date().toISOString()}] - Technician (${user.username || 'Tech'}): ${resolutionNote.trim()}`]
       : existingRemarks;
 
     const payload = {
@@ -135,6 +159,72 @@ const TechnicianTicketDetail = () => {
       setSubmitting(false);
     }
   };
+
+  const handleSaveEdit = async (idx) => {
+    if (!editingText.trim()) return;
+    const updatedRemarks = [...incident.remarksHistory];
+    const originalRemark = updatedRemarks[idx];
+    
+    // Strict ownership check
+    const isOwn = originalRemark.includes(`Technician (${user.username})`);
+    if (!isOwn) {
+      alert("Permission denied: You can only edit your own comments.");
+      setEditingIndex(null);
+      return;
+    }
+
+    const prefix = originalRemark.split(': ')[0];
+    updatedRemarks[idx] = `${prefix}: ${editingText}`;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
+      });
+      if (res.ok) {
+        setIncident({ ...incident, remarksHistory: updatedRemarks });
+        setEditingIndex(null);
+        setEditingText('');
+      }
+    } catch (err) {
+      alert('Failed to update comment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleDeleteComment = async (idx) => {
+    const originalRemark = incident.remarksHistory[idx];
+    
+    // Strict ownership check
+    const isOwn = originalRemark.includes(`Technician (${user.username})`);
+    if (!isOwn) {
+      alert("Permission denied: You can only delete your own comments.");
+      return;
+    }
+
+    if (!window.confirm('Delete this comment?')) return;
+    const updatedRemarks = incident.remarksHistory.filter((_, i) => i !== idx);
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
+      });
+      if (res.ok) {
+        setIncident({ ...incident, remarksHistory: updatedRemarks });
+      }
+    } catch (err) {
+      alert('Failed to delete comment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
 
   /* ── Loading ──────────────────────────────────────────── */
   if (!incident) return (
@@ -223,7 +313,24 @@ const TechnicianTicketDetail = () => {
         <div className="flex flex-col lg:flex-row gap-6 items-start">
 
           {/* ── LEFT: Description + Remarks + Reply ─────── */}
-          <div className="flex-1 min-w-0 space-y-4">
+          <div className="flex-1 min-w-0 space-y-6">
+
+            {/* Urgent Notification */}
+            {incident.urgent && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-4 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-3xl flex items-center gap-4 shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-200 shrink-0">
+                  <Zap size={20} fill="currentColor" />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-rose-700 uppercase tracking-widest">Priority Attention Required</p>
+                  <p className="text-sm font-bold text-rose-600 leading-tight">Admin has marked this ticket as high-priority/urgent.</p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Original report */}
             <motion.div
@@ -287,19 +394,15 @@ const TechnicianTicketDetail = () => {
                 <div className="space-y-3">
                   <AnimatePresence>
                     {incident.remarksHistory.map((remark, idx) => {
-                      const isTech    = remark.includes('- Technician:');
-                      const isAdmin   = remark.includes('Admin Note:');
-                      const isStudent = remark.includes('- Student:') || remark.includes('- User:');
+                      const isTech    = remark.includes('Technician');
+                      const isAdmin   = remark.includes('Admin');
+                      const isUser    = remark.includes('User') || remark.includes('Student');
+                      const isOwn     = isTech && user.username && remark.includes(`Technician (${user.username})`);
+                      
                       const parts     = remark.split(': ');
                       const message   = parts.slice(1).join(': ');
-                      const author    = isAdmin
-                        ? 'Administrator'
-                        : isTech
-                          ? (incident.assignedTechnicianName || 'Technician')
-                          : isStudent
-                            ? incident.reportedBy
-                            : 'Support';
-                      const dateStr   = parts[0]?.split(' - ')[0] || '';
+                      const author    = isAdmin ? 'Admin' : (isTech ? 'Technician' : (isUser ? 'User' : 'System'));
+                      const { dateStr, timeStr } = parseCommentDateTime(remark);
                       const role      = isAdmin ? 'Admin' : (isTech ? 'Technician' : 'Reporter');
 
                       return (
@@ -311,31 +414,76 @@ const TechnicianTicketDetail = () => {
                           transition={{ duration: 0.3, delay: idx * 0.04 }}
                           className="relative sm:pl-12"
                         >
-                          <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 border-white shadow-sm hidden sm:block ${isStudent ? 'bg-blue-400' : isAdmin ? 'bg-amber-500' : 'bg-indigo-500'}`} />
+                          <div className={`absolute left-3.5 top-4 w-3 h-3 rounded-full border-2 border-white shadow-sm hidden sm:block ${isUser ? 'bg-blue-400' : isAdmin ? 'bg-amber-500' : 'bg-indigo-500'}`} />
 
-                          <div className={`glass-card bg-white border overflow-hidden ${isStudent ? 'border-slate-100' : isAdmin ? 'border-amber-100' : 'border-indigo-100'} shadow-sm`}>
+                          <div className={`glass-card bg-white border overflow-hidden ${isUser ? 'border-slate-100' : isAdmin ? 'border-amber-100' : 'border-indigo-100'} shadow-sm`}>
                             {isTech && <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-indigo-500 to-purple-600" />}
                             {isAdmin && <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-amber-500 to-orange-600" />}
 
-                            <div className={`flex items-center justify-between px-5 py-3 border-b border-slate-50 ${isStudent ? 'bg-slate-50/50' : isAdmin ? 'bg-amber-50/30 pl-6' : 'pl-6 bg-indigo-50/30'}`}>
+                            <div className={`flex items-center justify-between px-5 py-3 border-b border-slate-50 ${isUser ? 'bg-slate-50/50' : isAdmin ? 'bg-amber-50/30 pl-6' : 'pl-6 bg-indigo-50/30'}`}>
                               <div className="flex items-center gap-3">
-                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm ${isStudent ? 'bg-blue-100 text-blue-600' : isAdmin ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                  {isStudent ? getInit(author) : <Shield size={13} />}
+                                <div className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shadow-sm ${isUser ? 'bg-blue-100 text-blue-600' : isAdmin ? 'bg-amber-100 text-amber-600' : 'bg-indigo-100 text-indigo-600'}`}>
+                                  {isUser ? getInit(author) : <Shield size={13} />}
                                 </div>
                                 <div>
                                   <p className="text-sm font-black text-slate-900">{author}</p>
-                                  <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    {role}
-                                  </p>
+                                  <div className="flex items-center gap-1.5 text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                                    <Clock size={9} />
+                                    <span>{dateStr}</span>
+                                    {timeStr && <span>•</span>}
+                                    {timeStr && <span>{timeStr}</span>}
+                                  </div>
                                 </div>
                               </div>
-                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                                <Clock size={10} /> {dateStr}
-                              </span>
+                              {isOwn && editingIndex !== idx && (
+                                <div className="flex items-center gap-1 ml-4">
+                                  <button
+                                    type="button"
+                                    onClick={() => { setEditingIndex(idx); setEditingText(message); }}
+                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
+                                  >
+                                    <Pencil size={12} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeleteComment(idx)}
+                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
                             <div className={`px-5 py-4 text-sm text-slate-700 leading-relaxed ${(isTech || isAdmin) ? 'pl-6' : ''}`}>
-                              {message}
+                              {editingIndex === idx ? (
+                                <div className="space-y-3">
+                                  <textarea
+                                    value={editingText}
+                                    onChange={e => setEditingText(e.target.value)}
+                                    rows="3"
+                                    className="w-full px-4 py-2 bg-white border border-indigo-200 rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none text-sm resize-none"
+                                  />
+                                  <div className="flex justify-end gap-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => setEditingIndex(null)}
+                                      className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest text-slate-500 hover:bg-slate-100 rounded-lg"
+                                    >
+                                      Cancel
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => handleSaveEdit(idx)}
+                                      className="px-3 py-1.5 text-[10px] font-black uppercase tracking-widest bg-indigo-600 text-white rounded-lg"
+                                    >
+                                      Save
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                message
+                              )}
                             </div>
                           </div>
                         </motion.div>
@@ -509,7 +657,7 @@ const TechnicianTicketDetail = () => {
                 ].map((step, i) => {
                   const done =
                     (i <= 3 && (incident.status === 'RESOLVED' || incident.status === 'CLOSED')) ||
-                    (i === 4 && incident.remarksHistory?.some(r => r.includes('Technician:'))) ||
+                    (i === 4 && incident.remarksHistory?.some(r => r.includes('Technician'))) ||
                     (i === 5 && (incident.status === 'RESOLVED' || incident.status === 'CLOSED'));
                   return (
                     <div key={i} className="flex items-center gap-3">

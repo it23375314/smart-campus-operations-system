@@ -18,40 +18,40 @@ const fmtDate = (incident) => {
 
 /* ─── Status / Priority configs ─────────────────────────────── */
 const STATUS_CFG = {
-  OPEN:          { label: 'Open',        pill: 'bg-amber-100 text-amber-700 border-amber-200',       dot: 'bg-amber-400'   },
-  Pending:       { label: 'Open',        pill: 'bg-amber-100 text-amber-700 border-amber-200',       dot: 'bg-amber-400'   },
-  IN_PROGRESS:   { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200',          dot: 'bg-blue-500'    },
-  'In Progress': { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200',          dot: 'bg-blue-500'    },
-  RESOLVED:      { label: 'Resolved',    pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  Resolved:      { label: 'Resolved',    pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
-  CLOSED:        { label: 'Closed',      pill: 'bg-slate-100 text-slate-500 border-slate-200',       dot: 'bg-slate-400'   },
+  OPEN: { label: 'Open', pill: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
+  Pending: { label: 'Open', pill: 'bg-amber-100 text-amber-700 border-amber-200', dot: 'bg-amber-400' },
+  IN_PROGRESS: { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  'In Progress': { label: 'In Progress', pill: 'bg-blue-100 text-blue-700 border-blue-200', dot: 'bg-blue-500' },
+  RESOLVED: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  Resolved: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+  CLOSED: { label: 'Closed', pill: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-400' },
 };
 const PRI_CFG = {
   Urgent: 'bg-rose-100 text-rose-700 border-rose-200',
-  High:   'bg-amber-100 text-amber-700 border-amber-200',
+  High: 'bg-amber-100 text-amber-700 border-amber-200',
   Medium: 'bg-indigo-100 text-indigo-700 border-indigo-200',
-  Low:    'bg-slate-100 text-slate-500 border-slate-200',
+  Low: 'bg-slate-100 text-slate-500 border-slate-200',
 };
 
 const FILTER_TABS = [
-  { key: 'ALL',         label: 'All',         icon: ListChecks },
-  { key: 'OPEN',        label: 'Open',        icon: CircleDot  },
-  { key: 'IN_PROGRESS', label: 'In Progress', icon: Activity   },
-  { key: 'RESOLVED',    label: 'Resolved',    icon: CheckCircle},
-  { key: 'CLOSED',      label: 'Closed',      icon: AlertCircle},
+  { key: 'ALL', label: 'All', icon: ListChecks },
+  { key: 'OPEN', label: 'Open', icon: CircleDot },
+  { key: 'IN_PROGRESS', label: 'In Progress', icon: Activity },
+  { key: 'RESOLVED', label: 'Resolved', icon: CheckCircle },
+  { key: 'CLOSED', label: 'Closed', icon: AlertCircle },
 ];
 
 /* ─── Main Component ─────────────────────────────────────────── */
 const TechnicianTickets = () => {
   const [incidents, setIncidents] = useState([]);
-  const [loading, setLoading]    = useState(true);
-  const [search, setSearch]      = useState('');
-  const [searchParams]           = useSearchParams();
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [searchParams] = useSearchParams();
 
   const initialFilter = searchParams.get('filter') || 'ALL';
   const [activeFilter, setActiveFilter] = useState(initialFilter);
 
-  const user     = JSON.parse(localStorage.getItem('user') || '{}');
+  const user = JSON.parse(localStorage.getItem('user') || '{}');
   const techName = user?.username || '';
 
   useEffect(() => {
@@ -81,12 +81,12 @@ const TechnicianTickets = () => {
 
   const filtered = incidents.filter(i => {
     const q = search.toLowerCase();
-    return matchesFilter(i) && (
-      !q ||
+    const matchesSearch = !q ||
       i.title?.toLowerCase().includes(q) ||
       String(i.referenceId || i.id)?.toLowerCase().includes(q) ||
-      i.category?.toLowerCase().includes(q)
-    );
+      i.category?.toLowerCase().includes(q);
+
+    return matchesFilter(i) && matchesSearch;
   });
 
   const countFor = (key) => {
@@ -122,11 +122,10 @@ const TechnicianTickets = () => {
           <button
             key={tab.key}
             onClick={() => setActiveFilter(tab.key)}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest border transition-all ${
-              activeFilter === tab.key
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest border transition-all ${activeFilter === tab.key
                 ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-200'
                 : 'bg-white text-slate-500 border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-            }`}
+              }`}
           >
             <tab.icon size={13} />
             {tab.label}
@@ -188,9 +187,9 @@ const TechnicianTickets = () => {
               <tbody>
                 <AnimatePresence>
                   {filtered.map((incident, idx) => {
-                    const cfg    = STATUS_CFG[incident.status] || STATUS_CFG.OPEN;
+                    const cfg = STATUS_CFG[incident.status] || STATUS_CFG.OPEN;
                     const priCfg = PRI_CFG[incident.priority] || PRI_CFG.Medium;
-                    const ref    = incident?.referenceId || incident?.id || '—';
+                    const ref = incident?.referenceId || incident?.id || '—';
                     return (
                       <motion.tr
                         key={incident.id}
@@ -204,10 +203,18 @@ const TechnicianTickets = () => {
                           <span className="font-mono text-xs font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-lg">{ref}</span>
                         </td>
                         <td className="px-6 py-4 max-w-[240px]">
-                          <p className="text-sm font-black text-slate-900 truncate">{incident.title}</p>
-                          <p className="text-xs text-slate-400 font-medium mt-0.5 flex items-center gap-1">
-                            <MapPin size={10} /> {incident.resource || '—'}
-                          </p>
+                          <div className="flex flex-col gap-1.5">
+                            <p className="text-sm font-black text-slate-900 truncate">{incident.title}</p>
+                            {incident.urgent && (
+                              <div className="flex items-center gap-1.5 px-2.5 py-1 bg-rose-50 border border-rose-100 rounded-lg w-fit animate-pulse">
+                                <Zap size={10} className="text-rose-600 fill-rose-600" />
+                                <span className="text-[9px] font-black uppercase tracking-wider text-rose-600">Admin marked this ticket as urgent</span>
+                              </div>
+                            )}
+                            <p className="text-xs text-slate-400 font-medium flex items-center gap-1">
+                              <MapPin size={10} /> {incident.resource || '—'}
+                            </p>
+                          </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <span className="text-xs font-medium text-slate-500">{incident.category || '—'}</span>

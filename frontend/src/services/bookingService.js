@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8085/bookings';
+const API_URL = 'http://localhost:8080/bookings';
 
 // Create axios instance with interceptors for simulation
 const api = axios.create({

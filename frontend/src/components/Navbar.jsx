@@ -115,6 +115,7 @@ const Navbar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              end
               className={({ isActive }) => `
                 relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-sm overflow-hidden group
                 ${isActive 

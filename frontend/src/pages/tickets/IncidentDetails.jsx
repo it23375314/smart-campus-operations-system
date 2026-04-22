@@ -41,6 +41,31 @@ const fmtDate = (incident) => {
     ? d.toLocaleString(undefined, { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' })
     : d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
 };
+const parseCommentDateTime = (remark) => {
+  if (!remark) return { dateStr: '—', timeStr: '', fullStr: '—' };
+  
+  let timestamp = null;
+  const match = remark.match(/^\[(.*?)\]\s*/);
+  if (match) {
+    timestamp = match[1];
+  } else {
+    const dashMatch = remark.match(/^(.+?)\s+-\s+/);
+    if (dashMatch) timestamp = dashMatch[1];
+  }
+  
+  if (!timestamp) return { dateStr: '—', timeStr: '', fullStr: remark.split(': ')[0] };
+
+  try {
+    const d = new Date(timestamp);
+    if (isNaN(d.getTime())) return { dateStr: timestamp, timeStr: '', fullStr: timestamp };
+    const dateStr = d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: '2-digit' });
+    const hasTime = timestamp.includes('T') || timestamp.includes(':') || /am|pm/i.test(timestamp);
+    const timeStr = hasTime ? d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }) : '';
+    return { dateStr, timeStr, fullStr: timeStr ? `${dateStr} ${timeStr}` : dateStr };
+  } catch {
+    return { dateStr: timestamp, timeStr: '', fullStr: timestamp };
+  }
+};
 
 /* ─────────────────────────────────────────────────────────────────
    Status / Priority  Config
@@ -114,6 +139,8 @@ const IncidentDetails = () => {
   const [replyFocused, setReplyFocused]     = useState(false);
 
   const currentUserEmail = localStorage.getItem('scos.email') || localStorage.getItem('scos.reportedBy') || '';
+  const currentUserRole = localStorage.getItem('scos.role') || '';
+  const isCurrentUserAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'Admin';
 
   useEffect(() => { fetchIncident(); }, [id]);
 
@@ -154,7 +181,7 @@ const IncidentDetails = () => {
     e.preventDefault();
     if (!newNote.trim()) return;
     setIsSubmitting(true);
-    const note = `${new Date().toLocaleDateString()} - Student: ${newNote}`;
+    const note = `[${new Date().toISOString()}] - Student: ${newNote}`;
     const updated = [...comments, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, text: note }];
     try {
       const remarks = await patchRemarks(updated);
@@ -279,7 +306,7 @@ const IncidentDetails = () => {
       headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold', fontSize: 11 },
       body: [
         [
-          `Status: ${incident.status}\nPriority: ${incident.priority || 'Medium'}\nCategory: ${incident.category || '—'}\nTicket Created: ${fmtDate(incident)}\nPDF Created: ${pdfCreatedAtStr}\nAssigned: ${incident.assignedTechnicianName || 'Unassigned'}`,
+          `Status: ${incident.status}\nPriority: ${incident.priority || 'Medium'}\nCategory: ${incident.category || '—'}\nResource / Location: ${incident.resource || '—'}\nTicket Created: ${fmtDate(incident)}\nPDF Created: ${pdfCreatedAtStr}\nAssigned: ${incident.assignedTechnicianName || 'Unassigned'}`,
           `Name: ${incident.reportedBy}\nEmail: ${incident.email || '—'}\nPhone: ${incident.contactNumber || '—'}\nFaculty: ${incident.faculty || '—'}\nCampus: ${incident.campus || '—'}`
         ]
       ],
@@ -333,17 +360,17 @@ const IncidentDetails = () => {
     } else {
       incident.remarksHistory.forEach((remark, i) => {
         const isStud = remark.includes('- Student:') || remark.includes('- User:');
-        const isAdmin = remark.includes('Admin Note:');
+        const isAdmin = remark.includes('Admin');
+        const isTech  = !isStud && !isAdmin;
         const parts  = remark.split(': ');
         let msg    = parts.slice(1).join(': ');
         if(!msg && parts.length > 0) msg = remark; // fallback
         
-        const author = isAdmin ? 'Administrator' : (isStud ? incident.reportedBy : (incident.assignedTechnicianName || 'Support Agent'));
-        const dateMatch = remark.match(/^(.+?) - /);
-        const dateStr = dateMatch ? dateMatch[1] : '';
+        const author = isAdmin ? 'Admin' : (isTech ? 'Technician' : 'User');
+        const { dateStr: parsedDate, timeStr: parsedTime } = parseCommentDateTime(remark);
+        const dateStr = parsedTime ? `${parsedDate} • ${parsedTime}` : parsedDate;
         const role = isAdmin ? 'Admin' : (isStud ? 'Reporter' : 'Technician');
         
-        const isTech = !isStud && !isAdmin;
         const bubbleFill = isAdmin ? [254, 243, 224] : isTech ? [238, 242, 255] : [248, 250, 252]; // Amber-50 vs Indigo-50 vs Slate-50
         const bubbleBorder = isAdmin ? [253, 224, 71] : isTech ? [199, 210, 254] : [226, 232, 240]; // Amber-300 vs Indigo-200 vs Slate-200
         const indentX = (isTech || isAdmin) ? margin + 20 : margin;
@@ -562,13 +589,20 @@ const IncidentDetails = () => {
                     {comments.map((comment, idx) => {
                       const remark    = comment.text;
                       const isStudent = remark.includes('- Student:') || remark.includes('- User:');
-                      const isAdmin   = remark.includes('Admin Note:');
-                      const isReporter= isStudent && (currentUserEmail === incident?.email || currentUserEmail === incident?.reportedBy);
+                      const isAdmin   = remark.includes('Admin');
+                      const isTech    = remark.includes('Technician');
+                      const isUser    = remark.includes('User') || remark.includes('Student');
+                      
+                      const isReporter= isUser && (currentUserEmail === incident?.email || currentUserEmail === incident?.reportedBy);
+                      const isTechnicianComment = !isUser && !isAdmin;
+                      const isCurrentUserCommentAuthor = (isUser && isReporter) || (isTechnicianComment && isCurrentUserAdmin) || (isAdmin && isCurrentUserAdmin);
+                      const canEditComment = isCurrentUserCommentAuthor;
+                      const canDeleteComment = (isReporter && isUser) || (isCurrentUserAdmin);
                       const parts     = remark.split(': ');
                       const message   = parts.slice(1).join(': ');
-                      const author    = isAdmin ? 'Administrator' : (isStudent ? incident.reportedBy : (incident.assignedTechnicianName || 'Support Agent'));
-                      const dateStr   = parts[0].split(' - ')[0];
-                      const role      = isAdmin ? 'Admin' : (isStudent ? 'Reporter' : 'Technician');
+                      const author    = isAdmin ? 'Admin' : (isTech ? 'Technician' : (isUser ? 'User' : 'System'));
+                      const { dateStr: fDate, timeStr: fTime } = parseCommentDateTime(remark);
+                      const role      = isAdmin ? 'Admin' : (isUser ? 'Reporter' : 'Technician');
 
                       return (
                         <motion.div
@@ -601,28 +635,40 @@ const IncidentDetails = () => {
                                 </div>
                               </div>
                               <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                                  <Clock size={10} /> {dateStr}
-                                </span>
-                                {isReporter && editingCommentId !== comment.id && !isAdmin && (
+                                {(() => {
+                                  const { dateStr: fDate, timeStr: fTime } = parseCommentDateTime(remark);
+                                  return (
+                                    <div className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                      <Clock size={10} />
+                                      <span>{fDate}</span>
+                                      {fTime && <span className="text-slate-400/60">•</span>}
+                                      {fTime && <span>{fTime}</span>}
+                                    </div>
+                                  );
+                                })()}
+                                {(canDeleteComment || canEditComment) && editingCommentId !== comment.id && (
                                   <div className="flex items-center gap-0.5">
-                                    <button
-                                      type="button"
-                                      onClick={() => handleEditComment(comment.id, remark)}
-                                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
-                                      title="Edit"
-                                    >
-                                      <Pencil size={13} />
-                                    </button>
-                                    <button
-                                      type="button"
-                                      onClick={() => handleDeleteComment(comment.id)}
-                                      disabled={isSubmitting}
-                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-40"
-                                      title="Delete"
-                                    >
-                                      <Trash2 size={13} />
-                                    </button>
+                                    {canEditComment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleEditComment(comment.id, remark)}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition"
+                                        title="Edit comment"
+                                      >
+                                        <Pencil size={13} />
+                                      </button>
+                                    )}
+                                    {canDeleteComment && (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleDeleteComment(comment.id)}
+                                        disabled={isSubmitting}
+                                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition disabled:opacity-40"
+                                        title={isCurrentUserAdmin && !isCurrentUserCommentAuthor ? "Delete (Moderation)" : "Delete"}
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    )}
                                   </div>
                                 )}
                               </div>
