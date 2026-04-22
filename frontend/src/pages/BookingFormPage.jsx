@@ -9,11 +9,13 @@ const BookingFormPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const passedResourceId = location.state?.resourceId || '';
+  const passedStartTime = location.state?.startTime || '';
+  const passedEndTime = location.state?.endTime || '';
 
   const [formData, setFormData] = useState({
     resourceId: passedResourceId,
-    startTime: '',
-    endTime: '',
+    startTime: passedStartTime,
+    endTime: passedEndTime,
     purpose: '',
     attendees: 1
   });
@@ -102,7 +104,7 @@ const BookingFormPage = () => {
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-heavy p-10 rounded-[3rem] border border-white shadow-2xl bg-white/40"
+          className="glass-heavy bg-white/70 p-10 rounded-[3rem] border border-white shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center gap-6 mb-12">

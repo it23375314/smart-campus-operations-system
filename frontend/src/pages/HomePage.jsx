@@ -193,7 +193,7 @@ const HomePage = () => {
                    animate={{ opacity: 1, x: 0 }}
                    transition={{ duration: 1.2, delay: 0.5 + (i * 0.2), ease: [0.16, 1, 0.3, 1] }}
                    whileHover={{ x: -20 }}
-                   className="w-[450px] p-8 glass-dark rounded-[2.5rem] border border-white/10 group cursor-pointer"
+                   className="w-[450px] p-8 glass-dark bg-slate-900/80 rounded-[2.5rem] border border-white/10 group cursor-pointer"
                 >
                    <div className="flex items-start gap-6">
                       <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center text-indigo-400 group-hover:bg-indigo-600 group-hover:text-white transition-all shadow-xl">
@@ -229,7 +229,7 @@ const HomePage = () => {
                </div>
                <div className="grid gap-8">
                   {intelligenceData.map((intel, i) => (
-                     <div key={i} className="p-10 bg-slate-50 rounded-[3rem] border border-slate-100 flex items-center justify-between group hover:bg-white hover:shadow-2xl hover:border-transparent transition-all">
+                     <div key={i} className="glass-heavy bg-white/70 p-10 rounded-[3rem] border border-white shadow-2xl flex items-center justify-between group hover:bg-white hover:shadow-2xl hover:border-transparent transition-all">
                         <div className="max-w-[60%]">
                            <h4 className="text-sm font-black text-slate-900 uppercase tracking-widest mb-2">{intel.label}</h4>
                            <p className="text-xs text-slate-400 font-medium leading-relaxed">{intel.desc}</p>

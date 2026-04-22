@@ -59,9 +59,7 @@ const bookingService = {
   },
 
   rejectBooking: async (id, reason) => {
-    const response = await api.patch(`/${id}/reject`, null, {
-      params: { reason }
-    });
+    const response = await api.patch(`/${id}/reject`, { reason });
     return response.data;
   },
 

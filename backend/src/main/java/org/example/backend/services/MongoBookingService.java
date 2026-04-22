@@ -13,10 +13,19 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.stream.Collectors;
 import java.util.Map;
 import java.util.HashMap;
+import org.example.backend.dtos.AvailabilitySlotDTO;
+import org.example.backend.dtos.AnalyticsSummaryDTO;
+import org.example.backend.dtos.ResourceUsageDTO;
+import org.example.backend.dtos.PeakHourDTO;
+import org.example.backend.repositories.ResourceRepository;
 
 import org.springframework.context.annotation.Profile;
 
@@ -26,6 +35,9 @@ public class MongoBookingService implements BookingService {
 
     @Autowired
     private BookingRepository bookingRepository;
+
+    @Autowired
+    private ResourceRepository resourceRepository;
 
     public BookingResponseDTO createBooking(BookingRequestDTO request, String currentUserId, Role currentUserRole) {
         // Enforce: Only USER can create bookings
@@ -154,14 +166,117 @@ public class MongoBookingService implements BookingService {
         return updateStatus(id, BookingStatus.CANCELLED, null);
     }
 
+    public List<AvailabilitySlotDTO> getAvailability(String resourceId, LocalDate date) {
+        // 1. Verify resource exists (optional but good practice)
+        // Note: For simplicity we assume resourceId validation happens at the controller level or here
+        
+        // 2. Fetch all APPROVED bookings for this resource on this date
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.atTime(LocalTime.MAX);
+        
+        List<Booking> approvedBookings = bookingRepository.findByResourceIdAndStatus(resourceId, BookingStatus.APPROVED)
+                .stream()
+                .filter(b -> {
+                    // Check if the booking overlaps with the requested date
+                    return (b.getStartTime().isBefore(endOfDay) && b.getEndTime().isAfter(startOfDay));
+                })
+                .collect(Collectors.toList());
+
+        // 3. Generate hourly slots from 08:00 to 20:00
+        List<AvailabilitySlotDTO> slots = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+        
+        for (int hour = 8; hour < 20; hour++) {
+            LocalTime slotStart = LocalTime.of(hour, 0);
+            LocalTime slotEnd = LocalTime.of(hour + 1, 0);
+            
+            LocalDateTime slotStartDT = date.atTime(slotStart);
+            LocalDateTime slotEndDT = date.atTime(slotEnd);
+            
+            boolean isBooked = approvedBookings.stream().anyMatch(b -> 
+                b.getStartTime().isBefore(slotEndDT) && b.getEndTime().isAfter(slotStartDT)
+            );
+            
+            slots.add(AvailabilitySlotDTO.builder()
+                    .startTime(slotStart.format(formatter))
+                    .endTime(slotEnd.format(formatter))
+                    .status(isBooked ? "BOOKED" : "AVAILABLE")
+                    .build());
+        }
+        
+        return slots;
+    }
+
     private BookingResponseDTO updateStatus(String id, BookingStatus status, String reason) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
+        
+        // Strict validation: Rejection MUST have a reason
+        if (status == BookingStatus.REJECTED && (reason == null || reason.trim().isEmpty())) {
+            throw new IllegalArgumentException("A rejection reason must be provided.");
+        }
+
         booking.setStatus(status);
         if (reason != null) {
             booking.setRejectionReason(reason);
         }
         return mapToDTO(bookingRepository.save(booking));
+    }
+
+    public AnalyticsSummaryDTO getSummaryAnalytics() {
+        long total = bookingRepository.count();
+        long approved = bookingRepository.countByStatus(BookingStatus.APPROVED);
+        long rejected = bookingRepository.countByStatus(BookingStatus.REJECTED);
+        long pending = bookingRepository.countByStatus(BookingStatus.PENDING);
+        long cancelled = bookingRepository.countByStatus(BookingStatus.CANCELLED);
+
+        return AnalyticsSummaryDTO.builder()
+                .total(total)
+                .approved(approved)
+                .rejected(rejected)
+                .pending(pending)
+                .cancelled(cancelled)
+                .approvalRatio(total > 0 ? (double) approved / total * 100 : 0)
+                .build();
+    }
+
+    public List<ResourceUsageDTO> getPopularResources() {
+        // Fetch all approved bookings and group by resourceId
+        Map<String, Long> counts = bookingRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED)
+                .collect(Collectors.groupingBy(Booking::getResourceId, Collectors.counting()));
+
+        return counts.entrySet().stream()
+                .map(entry -> {
+                    String name = resourceRepository.findById(entry.getKey())
+                            .map(r -> r.getName())
+                            .orElse("Unknown Resource");
+                    return ResourceUsageDTO.builder()
+                            .resourceId(entry.getKey())
+                            .resourceName(name)
+                            .bookingCount(entry.getValue())
+                            .build();
+                })
+                .sorted((a, b) -> Long.compare(b.getBookingCount(), a.getBookingCount()))
+                .limit(5) // Top 5
+                .collect(Collectors.toList());
+    }
+
+    public List<PeakHourDTO> getPeakHours() {
+        // Fetch all approved bookings and group by start hour
+        Map<Integer, Long> counts = bookingRepository.findAll().stream()
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED)
+                .collect(Collectors.groupingBy(b -> b.getStartTime().getHour(), Collectors.counting()));
+
+        List<PeakHourDTO> peakHours = new ArrayList<>();
+        // Ensure all 24 hours are represented
+        for (int h = 0; h < 24; h++) {
+            peakHours.add(PeakHourDTO.builder()
+                    .hour(h)
+                    .count(counts.getOrDefault(h, 0L))
+                    .build());
+        }
+        return peakHours;
     }
 
     public Map<String, Object> getAnalytics() {

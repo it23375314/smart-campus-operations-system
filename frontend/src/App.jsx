@@ -5,8 +5,7 @@ import HomePage from './pages/HomePage';
 import DashboardPage from './pages/DashboardPage';
 import BookingFormPage from './pages/BookingFormPage';
 import MyBookingsPage from './pages/MyBookingsPage';
-
-import AvailabilityView from './pages/AvailabilityView';
+import AvailabilityPage from './pages/AvailabilityPage';
 import AboutPage from './pages/AboutPage';
 import ResourcesPage from './pages/ResourcesPage';
 import LoginPage from './pages/LoginPage';
@@ -15,6 +14,8 @@ import AdminLayout from './layouts/AdminLayout';
 import ResourceList from './pages/admin/ResourceList';
 import ResourceForm from './pages/admin/ResourceForm';
 import ResourceDetails from './pages/admin/ResourceDetails';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
+import AdminBookingPage from './pages/admin/AdminBookingPage';
 
 function App() {
   return (
@@ -28,7 +29,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/about" element={<AboutPage />} />
             <Route path="/resources" element={<ResourcesPage />} />
-            <Route path="/availability" element={<AvailabilityView />} />
+            <Route path="/availability" element={<AvailabilityPage />} />
 
             {/* Standard User Dashboards */}
             <Route path="/dashboard" element={
@@ -61,6 +62,8 @@ function App() {
               }
             >
               <Route index element={<Navigate to="resources" replace />} />
+              <Route path="analytics" element={<AnalyticsDashboard />} />
+              <Route path="bookings" element={<AdminBookingPage />} />
               <Route path="resources" element={<ResourceList />} />
               <Route path="resources/add" element={<ResourceForm />} />
               <Route path="resources/edit/:id" element={<ResourceForm />} />

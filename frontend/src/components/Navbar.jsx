@@ -18,7 +18,8 @@ import {
   LayoutDashboard,
   ListChecks,
   LineChart,
-  Activity
+  Activity,
+  Inbox
 } from 'lucide-react';
 
 const Navbar = () => {
@@ -54,12 +55,16 @@ const Navbar = () => {
       case 'ADMIN':
         // ✅ 4. ADMIN Navbar
         return [
+          { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
+          { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
           { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
         ];
       case 'MANAGER':
         // ✅ 5. MANAGER Navbar
         return [
+          { path: '/admin/bookings', label: 'Evaluate Requests', icon: <Inbox size={18} /> },
+          { path: '/admin/analytics', label: 'Operational Analytics', icon: <BarChart3 size={18} /> },
           { path: '/admin', label: 'Analytics Dashboard', icon: <LineChart size={18} /> },
         ];
       case 'USER':

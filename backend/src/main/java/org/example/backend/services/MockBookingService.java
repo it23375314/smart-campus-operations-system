@@ -8,8 +8,16 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
+import org.example.backend.dtos.AvailabilitySlotDTO;
+import org.example.backend.dtos.AnalyticsSummaryDTO;
+import org.example.backend.dtos.ResourceUsageDTO;
+import org.example.backend.dtos.PeakHourDTO;
 
 @Service
 @Profile("mock")
@@ -96,6 +104,76 @@ public class MockBookingService implements BookingService {
         BookingResponseDTO b = getBookingById(id, currentUserId, currentUserRole);
         if (b != null) b.setStatus(BookingStatus.CANCELLED);
         return b;
+    }
+
+    @Override
+    public List<AvailabilitySlotDTO> getAvailability(String resourceId, LocalDate date) {
+        List<BookingResponseDTO> approvedBookings = mockBookings.stream()
+                .filter(b -> b.getResourceId().equals(resourceId))
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED)
+                .filter(b -> b.getStartTime().toLocalDate().equals(date))
+                .collect(Collectors.toList());
+
+        List<AvailabilitySlotDTO> slots = new ArrayList<>();
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        for (int hour = 8; hour < 20; hour++) {
+            LocalTime slotStart = LocalTime.of(hour, 0);
+            LocalTime slotEnd = LocalTime.of(hour + 1, 0);
+
+            boolean isBooked = approvedBookings.stream().anyMatch(b -> {
+                LocalTime bStart = b.getStartTime().toLocalTime();
+                LocalTime bEnd = b.getEndTime().toLocalTime();
+                return (bStart.isBefore(slotEnd) && bEnd.isAfter(slotStart));
+            });
+
+            slots.add(AvailabilitySlotDTO.builder()
+                    .startTime(slotStart.format(formatter))
+                    .endTime(slotEnd.format(formatter))
+                    .status(isBooked ? "BOOKED" : "AVAILABLE")
+                    .build());
+        }
+
+        return slots;
+    }
+
+    @Override
+    public AnalyticsSummaryDTO getSummaryAnalytics() {
+        long total = mockBookings.size();
+        long approved = mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.APPROVED).count();
+        long rejected = mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.REJECTED).count();
+        long pending = mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.PENDING).count();
+        long cancelled = mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED).count();
+
+        return AnalyticsSummaryDTO.builder()
+                .total(total)
+                .approved(approved)
+                .rejected(rejected)
+                .pending(pending)
+                .cancelled(cancelled)
+                .approvalRatio(total > 0 ? (double) approved / total * 100 : 85.0)
+                .build();
+    }
+
+    @Override
+    public List<ResourceUsageDTO> getPopularResources() {
+        return Arrays.asList(
+            new ResourceUsageDTO("Res-101", "Main Auditorium", 45),
+            new ResourceUsageDTO("Res-102", "Innovation Lab", 38),
+            new ResourceUsageDTO("Res-103", "Conference Room A", 29),
+            new ResourceUsageDTO("Res-104", "Digital Studio", 22),
+            new ResourceUsageDTO("Res-105", "Staff Lounge", 15)
+        );
+    }
+
+    @Override
+    public List<PeakHourDTO> getPeakHours() {
+        List<PeakHourDTO> peaks = new ArrayList<>();
+        for (int h = 0; h < 24; h++) {
+            long count = (h >= 9 && h <= 17) ? new Random().nextInt(20) + 10 : new Random().nextInt(5);
+            peaks.add(new PeakHourDTO(h, count));
+        }
+        return peaks;
     }
 
     @Override

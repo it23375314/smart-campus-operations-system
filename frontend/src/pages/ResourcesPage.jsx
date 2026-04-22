@@ -111,7 +111,7 @@ const ResourcesPage = () => {
                     variants={itemVariants}
                     whileHover={{ y: -10 }}
                     onClick={() => setSelectedCategory(cat)}
-                    className="p-10 glass-heavy rounded-[3rem] border border-white transition-all cursor-pointer group hover:bg-slate-900 hover:border-slate-800"
+                    className="p-10 glass-heavy bg-white/70 rounded-[3rem] border border-white transition-all cursor-pointer group hover:bg-slate-900"
                   >
                     <div className="w-16 h-16 bg-white rounded-2xl flex items-center justify-center text-indigo-600 mb-8 transition-all group-hover:scale-110 group-hover:bg-indigo-600 group-hover:text-white shadow-lg">
                       {cat.icon}
@@ -150,7 +150,7 @@ const ResourcesPage = () => {
                     <p className="text-lg text-slate-500 font-medium max-w-2xl">{selectedCategory.desc}</p>
                   </div>
                   
-                  <div className="flex items-center gap-4 glass-heavy p-2 rounded-2xl border border-white/40 shadow-xl">
+                  <div className="flex items-center gap-4 glass-heavy bg-white/70 p-2 rounded-2xl border border-white/40 shadow-xl">
                     <div className="px-6 h-12 flex items-center gap-3 min-w-[300px]">
                       <Search size={16} className="text-slate-400" />
                       <input 
@@ -189,7 +189,7 @@ const ResourcesPage = () => {
                       key={resource.id}
                       variants={itemVariants}
                       whileHover={{ y: -10 }}
-                      className="group glass-heavy rounded-[3rem] border border-white overflow-hidden flex flex-col shadow-xl hover:shadow-indigo-500/10 transition-all"
+                      className="group glass-heavy bg-white/70 rounded-[3rem] border border-white overflow-hidden flex flex-col shadow-xl hover:shadow-indigo-500/10 transition-all"
                     >
                       <div className="h-64 relative overflow-hidden bg-slate-200">
                         {resource.imageUrl ? (

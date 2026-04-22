@@ -113,7 +113,7 @@ const AvailabilityView = () => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.1 }}
                 key={booking.id} 
-                className="p-8 glass-heavy bg-white border border-white rounded-[2.5rem] flex items-center gap-6 group hover:border-indigo-100 transition-all shadow-lg"
+                className="p-8 glass-heavy bg-white/70 border border-white rounded-[2.5rem] flex items-center gap-6 group hover:border-indigo-100 transition-all shadow-lg"
               >
                 <div className="p-5 bg-slate-50 text-indigo-600 rounded-2xl shadow-inner group-hover:bg-indigo-600 group-hover:text-white transition-all">
                   <Clock size={28} />
