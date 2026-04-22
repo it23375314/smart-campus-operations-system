@@ -1,17 +1,15 @@
 package org.example.backend.models;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.index.Indexed;
 
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotBlank;
+import java.time.LocalDateTime;
 
 @Data
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Document(collection = "users")
@@ -20,12 +18,25 @@ public class User {
     @Id
     private String id;
 
-    @NotBlank(message = "Username is required")
-    private String username;
+    private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email should be valid")
+    @Indexed(unique = true)
     private String email;
 
+    private String password;
+
     private Role role;
+
+    private boolean active;
+
+    private LocalDateTime createdAt;
+
+    public User(String name, String email, String password, Role role) {
+        this.name = name;
+        this.email = email;
+        this.password = password;
+        this.role = role;
+        this.active = true;
+        this.createdAt = LocalDateTime.now();
+    }
 }

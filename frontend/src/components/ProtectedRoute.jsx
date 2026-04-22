@@ -1,20 +1,32 @@
-import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
-const ProtectedRoute = ({ children, allowedRoles }) => {
-  const user = JSON.parse(localStorage.getItem('user'));
+const ProtectedRoute = ({ children, adminOnly = false, allowedRoles }) => {
+    const { user, loading } = useAuth();
 
-  if (!user) {
-    // User not logged in
-    return <Navigate to="/login" replace />;
-  }
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-screen">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            </div>
+        );
+    }
 
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    // User role not authorized
-    return <Navigate to="/" replace />;
-  }
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
 
-  return children;
+    // Check adminOnly flag
+    if (adminOnly && user.role !== 'ADMIN') {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    // Check allowedRoles array (used by teammates)
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return children;
 };
 
 export default ProtectedRoute;
