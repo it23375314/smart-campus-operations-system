@@ -18,7 +18,7 @@ const OAuthSuccess = () => {
         if (token) {
             login({ id, name, email, role }, token);
             toast.success(`Welcome, ${name}!`);
-            navigate('/dashboard');
+            navigate('/');
         } else {
             toast.error('OAuth login failed');
             navigate('/login');

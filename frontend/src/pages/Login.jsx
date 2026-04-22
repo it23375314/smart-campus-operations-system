@@ -22,7 +22,7 @@ const Login = () => {
             const { token, ...userData } = res.data;
             login(userData, token);
             toast.success(`Welcome back, ${userData.name}!`);
-            navigate('/dashboard');
+            navigate('/');
         } catch (err) {
             toast.error(err.response?.data?.error || 'Login failed');
         } finally {

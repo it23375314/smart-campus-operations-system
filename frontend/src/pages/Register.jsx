@@ -22,7 +22,7 @@ const Register = () => {
             const { token, ...userData } = res.data;
             login(userData, token);
             toast.success(`Welcome, ${userData.name}!`);
-            navigate('/dashboard');
+            navigate('/');
         } catch (err) {
             toast.error(err.response?.data?.error || 'Registration failed');
         } finally {
