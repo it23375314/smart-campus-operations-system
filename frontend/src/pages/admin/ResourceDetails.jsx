@@ -15,9 +15,7 @@ import {
   Package,
   Briefcase
 } from 'lucide-react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8085/api/resources';
+import API from '../../services/api';
 
 const StatusIcon = ({ status }) => {
   const config = {
@@ -55,7 +53,7 @@ const ResourceDetails = () => {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/${id}`);
+        const res = await API.get(`/resources/${id}`);
         setResource(res.data);
       } catch {
         setError('Resource not found or could not be loaded.');
@@ -69,7 +67,7 @@ const ResourceDetails = () => {
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this resource? This action cannot be undone.')) return;
     try {
-      await axios.delete(`${API_BASE}/${id}`);
+      await API.delete(`/resources/${id}`);
       navigate('/admin/resources');
     } catch {
       alert('Failed to delete resource.');

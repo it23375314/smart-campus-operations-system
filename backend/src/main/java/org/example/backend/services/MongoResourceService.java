@@ -6,9 +6,6 @@ import org.example.backend.repositories.ResourceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.util.List;
-import java.util.Optional;
-
 import org.springframework.context.annotation.Profile;
 
 import java.util.List;

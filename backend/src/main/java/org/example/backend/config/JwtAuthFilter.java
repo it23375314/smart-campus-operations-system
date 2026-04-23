@@ -31,7 +31,20 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             String token = authHeader.substring(7);
 
-            if (jwtUtil.isTokenValid(token)) {
+            if (token.startsWith("mock-token-")) {
+                // Developer Bypass: Handle fast local logins without signing real JWTs
+                String role = token.split("-")[2].toUpperCase(); // Extract MANAGER, ADMIN, USER
+                
+                UsernamePasswordAuthenticationToken authentication =
+                        new UsernamePasswordAuthenticationToken(
+                                "dev@" + role.toLowerCase() + ".com",
+                                null,
+                                List.of(new SimpleGrantedAuthority("ROLE_" + role))
+                        );
+
+                SecurityContextHolder.getContext().setAuthentication(authentication);
+                
+            } else if (jwtUtil.isTokenValid(token)) {
                 String email = jwtUtil.extractEmail(token);
                 String role = jwtUtil.extractRole(token);
 

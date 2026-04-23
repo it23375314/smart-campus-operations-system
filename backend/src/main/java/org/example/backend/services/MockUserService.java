@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Profile("mock")
-public class MockUserService implements UserService {
+public class MockUserService {
 
     private final List<User> mockUsers = new ArrayList<>();
 
@@ -27,18 +27,17 @@ public class MockUserService implements UserService {
     private User createMockUser(String id, String name, String email, Role role) {
         User u = new User();
         u.setId(id);
-        u.setUsername(name);
+        u.setName(name);
         u.setEmail(email);
         u.setRole(role);
+        u.setActive(true);
         return u;
     }
 
-    @Override
     public List<User> getManagers() {
         return mockUsers.stream().filter(u -> u.getRole() == Role.MANAGER || u.getRole() == Role.ADMIN).collect(Collectors.toList());
     }
 
-    @Override
     public List<User> getAllUsers() {
         return mockUsers;
     }

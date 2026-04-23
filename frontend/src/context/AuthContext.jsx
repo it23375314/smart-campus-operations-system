@@ -34,7 +34,8 @@ export const AuthProvider = ({ children }) => {
     };
 
     const isAdmin = () => user?.role === 'ADMIN';
-    const isTechnician = () => user?.role === 'TECHNICIAN';
+    const isManager = () => user?.role === 'MANAGER';
+    const isStudent = () => user?.role === 'USER';
 
     return (
         <AuthContext.Provider value={{
@@ -44,7 +45,8 @@ export const AuthProvider = ({ children }) => {
             login,
             logout,
             isAdmin,
-            isTechnician
+            isManager,
+            isStudent
         }}>
             {children}
         </AuthContext.Provider>

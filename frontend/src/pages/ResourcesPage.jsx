@@ -18,7 +18,7 @@ import {
   Clock
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
+import API from '../services/api';
 
 const ResourcesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -44,7 +44,7 @@ const ResourcesPage = () => {
   const fetchResources = async () => {
     setLoading(true);
     try {
-      const res = await axios.get(`http://localhost:8085/api/resources?category=${selectedCategory.id}`);
+      const res = await API.get(`/resources?category=${selectedCategory.id}`);
       setResources(res.data);
     } catch (err) {
       console.error("Failed to fetch resources:", err);

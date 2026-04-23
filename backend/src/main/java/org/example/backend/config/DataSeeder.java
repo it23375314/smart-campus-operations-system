@@ -19,29 +19,10 @@ public class DataSeeder {
     CommandLineRunner initDatabase(UserRepository userRepository) {
         return args -> {
             if (userRepository.count() == 0) {
-                User m1 = User.builder()
-                        .username("John Manager")
-                        .email("john.m@campus.edu")
-                        .role(Role.MANAGER)
-                        .build();
-
-                User m2 = User.builder()
-                        .username("Sara Wilson")
-                        .email("sara.w@campus.edu")
-                        .role(Role.MANAGER)
-                        .build();
-
-                User a1 = User.builder()
-                        .username("Admin User")
-                        .email("admin@campus.edu")
-                        .role(Role.ADMIN)
-                        .build();
-
-                User s1 = User.builder()
-                        .username("Student One")
-                        .email("student1@campus.edu")
-                        .role(Role.USER)
-                        .build();
+            User m1 = new User("John Manager", "john.m@campus.edu", "", Role.MANAGER);
+            User m2 = new User("Sara Wilson", "sara.w@campus.edu", "", Role.MANAGER);
+            User a1 = new User("Admin User", "admin@campus.edu", "", Role.ADMIN);
+            User s1 = new User("Student One", "student1@campus.edu", "", Role.USER);
 
                 userRepository.saveAll(Arrays.asList(m1, m2, a1, s1));
                 System.out.println("Seed data loaded: Users initialized.");

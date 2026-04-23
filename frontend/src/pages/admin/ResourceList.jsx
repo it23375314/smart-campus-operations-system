@@ -14,9 +14,7 @@ import {
   Briefcase
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8085/api/resources';
+import API from '../../services/api';
 
 const MOCK_RESOURCES = [
   {
@@ -100,7 +98,7 @@ const ResourceList = () => {
     setLoading(true);
     setError(null);
     try {
-      const res = await axios.get(API_BASE);
+      const res = await API.get('/resources');
       setResources(res.data.length > 0 ? res.data : MOCK_RESOURCES);
     } catch {
       // Fallback to mock data if backend is not running
@@ -117,7 +115,7 @@ const ResourceList = () => {
   const handleDelete = async (id) => {
     if (!confirm('Are you sure you want to delete this resource?')) return;
     try {
-      await axios.delete(`${API_BASE}/${id}`);
+      await API.delete(`/resources/${id}`);
       setResources(prev => prev.filter(r => r.id !== id));
     } catch {
       alert('Failed to delete resource. Please try again.');

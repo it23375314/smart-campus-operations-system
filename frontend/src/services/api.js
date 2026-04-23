@@ -4,12 +4,25 @@ const API = axios.create({
     baseURL: 'http://localhost:8080/api',
 });
 
-// Automatically add token to every request
+// Automatically add token and user headers to every request
 API.interceptors.request.use((config) => {
     const token = localStorage.getItem('token');
     if (token) {
         config.headers.Authorization = `Bearer ${token}`;
     }
+    
+    // Some backend controllers require explicit User ID and Role headers
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+        try {
+            const user = JSON.parse(userStr);
+            config.headers['X-User-Id'] = user.id;
+            config.headers['X-User-Role'] = user.role;
+        } catch (e) {
+            console.error('Error parsing user from localStorage', e);
+        }
+    }
+    
     return config;
 });
 

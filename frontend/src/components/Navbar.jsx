@@ -1,7 +1,6 @@
 import React from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { getUnreadCount } from '../services/api';
 import {
   Layout,
   PlusCircle,
@@ -13,16 +12,19 @@ import {
   UserCircle,
   Bell,
   Settings,
-  BarChart3,
-  Hexagon,
+  Activity,
   Info,
+  Hexagon,
   LayoutDashboard,
+  Inbox,
+  BarChart3,
   ListChecks,
   LineChart,
-  Activity,
-  Inbox
+  ChevronDown
 } from "lucide-react";
-
+import {
+  getUnreadCount
+} from "../services/api";
 
 const UnreadBadge = () => {
   const [count, setCount] = React.useState(0);
@@ -52,6 +54,8 @@ const UnreadBadge = () => {
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef(null);
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
 
@@ -59,6 +63,16 @@ const Navbar = () => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
     window.addEventListener("scroll", handleScroll);
     return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const handleLogout = () => {
@@ -82,11 +96,10 @@ const Navbar = () => {
 
   // Role-Specific logic
   const getRoleItems = () => {
-    if (!user) return []; // Guest handled via "user ?" logic in UI
+    if (!user) return [];
 
     switch (user.role) {
       case "ADMIN":
-        // ✅ 4. ADMIN Navbar
         return [
           { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
           { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
@@ -94,7 +107,6 @@ const Navbar = () => {
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
         ];
       case "MANAGER":
-        // ✅ 5. MANAGER Navbar
         return [
           { path: '/admin/bookings', label: 'Evaluate Requests', icon: <Inbox size={18} /> },
           { path: '/admin/analytics', label: 'Operational Analytics', icon: <BarChart3 size={18} /> },
@@ -102,7 +114,6 @@ const Navbar = () => {
         ];
       case "USER":
       default:
-        // ✅ 3. USER Navbar (Student / Staff)
         return [
           {
             path: "/bookings",
@@ -164,7 +175,7 @@ const Navbar = () => {
         </div>
 
         {/* User Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 relative">
           <div className="hidden sm:flex items-center gap-2 mr-2">
             <Link
               to="/notifications"
@@ -179,53 +190,53 @@ const Navbar = () => {
           </div>
 
           {user ? (
-            <div className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl border transition-all bg-white border-slate-100 shadow-sm">
-              <motion.div
-                whileHover={{ rotate: 5 }}
-                className={`p-2.5 rounded-xl text-white shadow-lg ${
-                  user.role === "ADMIN"
-                    ? "bg-rose-500"
-                    : user.role === "MANAGER"
-                      ? "bg-amber-500"
-                      : "bg-indigo-600"
-                }`}
-              >
-                <UserCircle size={22} />
-              </motion.div>
-              <div className="hidden sm:block">
-                <div className="text-sm font-black leading-none mb-1 transition-colors text-slate-900">
-                  {user.name || user.username}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      user.role === "ADMIN"
-                        ? "bg-rose-500"
-                        : user.role === "MANAGER"
-                          ? "bg-amber-500"
-                          : "bg-indigo-500"
-                    }`}
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest transition-colors text-slate-400">
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-              <div className="h-8 w-px mx-2 transition-colors bg-slate-100" />
-              <button
-                onClick={handleLogout}
-                className="p-2 transition-colors text-slate-400 hover:text-rose-600"
-                title="Logout"
-              >
-                <LogOut size={20} />
-              </button>
+            <div className="relative" ref={dropdownRef}>
+               {/* User Info Card / Dropdown Trigger */}
+               <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-3 p-1.5 pr-3 rounded-2xl border bg-white border-slate-200 hover:border-indigo-300 shadow-sm transition-all focus:outline-none group"
+               >
+                  <div className={`p-2.5 rounded-xl text-white shadow-md transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-600'}`}>
+                    <UserCircle size={20} />
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className="text-[13px] font-black text-slate-900 leading-tight">{user.name || 'User'}</p>
+                    <p className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">{user.role}</p>
+                  </div>
+                  <ChevronDown size={14} className={`text-slate-400 ml-1 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+               </button>
+
+               {/* Dropdown Menu */}
+               {isDropdownOpen && (
+                 <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl py-2 z-[999] overflow-hidden origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-4 py-3 border-b border-slate-100/80 mb-1 bg-slate-50/50">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Signed in as</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{user.email || 'user@campus.edu'}</p>
+                    </div>
+                    
+                    <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+                      <User size={16} />
+                      Profile Settings
+                    </Link>
+                    
+                    <div className="h-px bg-slate-100 my-1 mx-4" />
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                 </div>
+               )}
             </div>
           ) : (
             <div className="flex items-center gap-4">
               {/* ✅ 2. Guest View: Show Login */}
               <Link
                 to="/login"
-                className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200"
+                className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-200"
               >
                 Sign In
               </Link>

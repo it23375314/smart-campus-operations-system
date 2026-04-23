@@ -1,9 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { ArrowLeft, Upload, Save, Loader2 } from 'lucide-react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8085/api/resources';
+import API from '../../services/api';
 
 const CATEGORIES = ['Auditorium', 'Laboratory', 'Equipment', 'Classroom', 'Sports', 'Other'];
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -34,7 +32,7 @@ const ResourceForm = () => {
   useEffect(() => {
     const fetchManagers = async () => {
       try {
-        const res = await axios.get('http://localhost:8085/api/users/managers');
+        const res = await API.get('/users/managers');
         setManagers(res.data);
       } catch (err) {
         console.error('Failed to fetch managers:', err);
@@ -45,7 +43,7 @@ const ResourceForm = () => {
     if (!isEdit) return;
     const fetchResource = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/${id}`);
+        const res = await API.get(`/resources/${id}`);
         setForm({
           ...initialForm,
           ...res.data,
@@ -98,9 +96,9 @@ const ResourceForm = () => {
     const payload = { ...form, capacity: Number(form.capacity) };
     try {
       if (isEdit) {
-        await axios.put(`${API_BASE}/${id}`, payload);
+        await API.put(`/resources/${id}`, payload);
       } else {
-        await axios.post(API_BASE, payload);
+        await API.post('/resources', payload);
       }
       navigate('/admin/resources');
     } catch (err) {

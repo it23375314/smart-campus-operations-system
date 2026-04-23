@@ -22,7 +22,7 @@ import org.example.backend.dtos.PeakHourDTO;
 import org.example.backend.services.ResourceService;
 
 @RestController
-@RequestMapping("/bookings")
+@RequestMapping("/api/bookings")
 @CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class BookingController {
 
