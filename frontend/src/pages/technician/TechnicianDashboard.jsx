@@ -16,6 +16,7 @@ const STATUS_CONFIG = {
   RESOLVED: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400', dot: 'bg-emerald-500' },
   Resolved: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', bar: 'from-emerald-400 to-teal-400', dot: 'bg-emerald-500' },
   CLOSED: { label: 'Closed', pill: 'bg-slate-100 text-slate-500 border-slate-200', bar: 'from-slate-300 to-slate-400', dot: 'bg-slate-400' },
+  REJECTED: { label: 'Rejected', pill: 'bg-rose-100 text-rose-700 border-rose-200', bar: 'from-rose-500 to-pink-600', dot: 'bg-rose-500' },
 };
 
 const PRIORITY_CONFIG = {
@@ -122,7 +123,9 @@ const TechnicianDashboard = () => {
           i.assignedTechnicianId === user.id
         );
         // fallback: show all if none assigned
-        setIncidents(myTickets.length > 0 ? myTickets : data);
+        let finalTickets = myTickets.length > 0 ? myTickets : data;
+        finalTickets.sort((a, b) => new Date(b.createdAt || b.dateReported) - new Date(a.createdAt || a.dateReported));
+        setIncidents(finalTickets);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));

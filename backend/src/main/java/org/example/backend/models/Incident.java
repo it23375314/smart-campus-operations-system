@@ -26,6 +26,9 @@ public class Incident {
     private String category;
     private String resource;
     private String description; // Maps to "Message"
+
+    // Priority field (Low, Medium, High)
+    private String priority;
     
     private LocalDate dateReported;
     private LocalDateTime createdAt;
@@ -40,6 +43,8 @@ public class Incident {
     private String assignedTechnicianCategory;
 
     private List<String> remarksHistory = new ArrayList<>();
+
+    private String rejectionReason;
 
     public Incident() {}
 
@@ -80,6 +85,10 @@ public class Incident {
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
 
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
+
     public LocalDate getDateReported() { return dateReported; }
     public void setDateReported(LocalDate dateReported) { this.dateReported = dateReported; }
 
@@ -106,4 +115,7 @@ public class Incident {
 
     public List<String> getRemarksHistory() { return remarksHistory; }
     public void setRemarksHistory(List<String> remarksHistory) { this.remarksHistory = remarksHistory; }
+
+    public String getRejectionReason() { return rejectionReason; }
+    public void setRejectionReason(String rejectionReason) { this.rejectionReason = rejectionReason; }
 }

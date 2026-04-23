@@ -332,6 +332,23 @@ const TechnicianTicketDetail = () => {
               </motion.div>
             )}
 
+            {/* Rejection Notification */}
+            {incident.status === 'REJECTED' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-4 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-3xl flex items-center gap-4 shadow-sm"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-200 shrink-0">
+                  <XCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-rose-700 uppercase tracking-widest">Ticket Rejected</p>
+                  <p className="text-sm font-bold text-rose-600 leading-tight">Reason: {incident.rejectionReason || 'No reason provided.'}</p>
+                </div>
+              </motion.div>
+            )}
+
             {/* Original report */}
             <motion.div
               initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
@@ -526,10 +543,11 @@ const TechnicianTicketDetail = () => {
                         key={s.val}
                         type="button"
                         onClick={() => setStatus(s.val)}
+                        disabled={incident.status === 'REJECTED'}
                         className={`flex flex-col items-center gap-1.5 p-3 rounded-2xl border-2 transition-all ${
                           status === s.val
                             ? `${s.color} shadow-sm scale-[1.02]`
-                            : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200'
+                            : 'border-slate-100 bg-slate-50 text-slate-400 hover:border-slate-200 disabled:opacity-50'
                         }`}
                       >
                         <s.icon size={16} />
@@ -544,15 +562,16 @@ const TechnicianTicketDetail = () => {
                   <label className="text-xs font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                     <MessageSquare size={11} /> Resolution / Work Note
                   </label>
-                  <textarea
-                    value={resolutionNote}
-                    onChange={e => setNote(e.target.value)}
-                    onFocus={() => setReplyFocused(true)}
-                    onBlur={() => !resolutionNote && setReplyFocused(false)}
-                    rows={replyFocused ? 6 : 4}
-                    placeholder="Describe what you did to resolve this issue, any parts replaced, steps taken, or further action required…"
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none text-sm text-slate-700 resize-none transition-all placeholder:text-slate-400"
-                  />
+                    <textarea
+                      value={resolutionNote}
+                      onChange={e => setNote(e.target.value)}
+                      onFocus={() => setReplyFocused(true)}
+                      onBlur={() => !resolutionNote && setReplyFocused(false)}
+                      disabled={incident.status === 'REJECTED'}
+                      rows={replyFocused ? 6 : 4}
+                      placeholder={incident.status === 'REJECTED' ? "This ticket has been rejected and cannot be updated." : "Describe what you did to resolve this issue, any parts replaced, steps taken, or further action required…"}
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent focus:bg-white outline-none text-sm text-slate-700 resize-none transition-all placeholder:text-slate-400 disabled:opacity-50"
+                    />
                 </div>
 
                 {/* Actions */}
@@ -572,12 +591,14 @@ const TechnicianTicketDetail = () => {
                     )}
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || incident.status === 'REJECTED'}
                       className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-indigo-200 disabled:opacity-40 disabled:cursor-not-allowed active:scale-95"
                     >
                       {submitting
                         ? <><Loader2 size={13} className="animate-spin" /> Saving…</>
-                        : <><Save size={13} /> Save Update</>
+                        : incident.status === 'REJECTED' 
+                          ? <><XCircle size={13} /> Ticket Rejected</>
+                          : <><Save size={13} /> Save Update</>
                       }
                     </button>
                   </div>

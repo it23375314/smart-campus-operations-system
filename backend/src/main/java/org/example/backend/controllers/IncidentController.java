@@ -144,6 +144,10 @@ public class IncidentController {
                 incident.setRemarksHistory(updatedIncident.getRemarksHistory());
             }
 
+            if (updatedIncident.getRejectionReason() != null) {
+                incident.setRejectionReason(updatedIncident.getRejectionReason());
+            }
+
             return incidentRepository.save(incident);
         }
         return null;

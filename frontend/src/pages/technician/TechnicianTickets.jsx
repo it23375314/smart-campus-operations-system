@@ -25,6 +25,7 @@ const STATUS_CFG = {
   RESOLVED: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
   Resolved: { label: 'Resolved', pill: 'bg-emerald-100 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
   CLOSED: { label: 'Closed', pill: 'bg-slate-100 text-slate-500 border-slate-200', dot: 'bg-slate-400' },
+  REJECTED: { label: 'Rejected', pill: 'bg-rose-100 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
 };
 const PRI_CFG = {
   Urgent: 'bg-rose-100 text-rose-700 border-rose-200',
@@ -63,7 +64,9 @@ const TechnicianTickets = () => {
           i.assignedTechnicianName?.toLowerCase() === techName.toLowerCase() ||
           i.assignedTechnicianId === user.id
         );
-        setIncidents(myTickets.length > 0 ? myTickets : data);
+        let finalTickets = myTickets.length > 0 ? myTickets : data;
+        finalTickets.sort((a, b) => new Date(b.createdAt || b.dateReported) - new Date(a.createdAt || a.dateReported));
+        setIncidents(finalTickets);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));

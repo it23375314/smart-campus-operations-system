@@ -181,7 +181,7 @@ const IncidentDetails = () => {
     e.preventDefault();
     if (!newNote.trim()) return;
     setIsSubmitting(true);
-    const note = `[${new Date().toISOString()}] - Student: ${newNote}`;
+    const note = `[${new Date().toISOString()}] - User: ${newNote}`;
     const updated = [...comments, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, text: note }];
     try {
       const remarks = await patchRemarks(updated);
@@ -319,6 +319,29 @@ const IncidentDetails = () => {
 
     if (doc.lastAutoTable) {
         y = doc.lastAutoTable.finalY + 15;
+    }
+
+    // --- Rejection Reason ---
+    if (incident.status === 'REJECTED' && incident.rejectionReason) {
+      checkPageBreak(30);
+      doc.setTextColor(225, 29, 72); // rose-600
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Ticket Rejected', margin, y);
+      y += 8;
+
+      const rejBoxY = y;
+      doc.setTextColor(159, 18, 57); // rose-800
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      const rejLines = doc.splitTextToSize(`Reason: ${incident.rejectionReason}`, pageWidth - 2 * margin - 10);
+      const rejHeight = Math.max((rejLines.length * 4.5) + 8, 15);
+
+      doc.setFillColor(255, 241, 242); // rose-50
+      doc.setDrawColor(254, 205, 211); // rose-200
+      doc.rect(margin, rejBoxY, pageWidth - 2 * margin, rejHeight, 'FD');
+      doc.text(rejLines, margin + 5, rejBoxY + 7);
+      y = rejBoxY + rejHeight + 15;
     }
 
     // --- Description ---
@@ -519,6 +542,23 @@ const IncidentDetails = () => {
 
           {/* ── LEFT: Conversation Thread ────────────────────────── */}
           <div className="flex-1 min-w-0 space-y-4">
+
+            {/* Rejection Notification */}
+            {incident.status === 'REJECTED' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="p-4 bg-gradient-to-r from-rose-50 to-rose-100 border border-rose-200 rounded-3xl flex items-center gap-4 shadow-sm mb-4"
+              >
+                <div className="w-10 h-10 rounded-2xl bg-rose-600 text-white flex items-center justify-center shadow-lg shadow-rose-200 shrink-0">
+                  <XCircle size={20} />
+                </div>
+                <div>
+                  <p className="text-xs font-black text-rose-700 uppercase tracking-widest">Ticket Rejected</p>
+                  <p className="text-sm font-bold text-rose-600 leading-tight">Reason: {incident.rejectionReason || 'No reason provided.'}</p>
+                </div>
+              </motion.div>
+            )}
 
             {/* Original Message */}
             <motion.div
