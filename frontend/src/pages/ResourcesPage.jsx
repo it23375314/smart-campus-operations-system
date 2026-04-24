@@ -39,7 +39,8 @@ const ResourcesPage = () => {
     type: '',
     minCapacity: '',
     location: '',
-    status: ''
+    status: '',
+    search: ''
   });
   const [selectedResource, setSelectedResource] = useState(null);
   const navigate = useNavigate();
@@ -63,6 +64,20 @@ const ResourcesPage = () => {
     }
   };
 
+  const handleSearchChange = (val) => {
+    setFilters(prev => ({ ...prev, search: val }));
+  };
+
+  const clearFilters = () => {
+    setFilters({
+      type: '',
+      minCapacity: '',
+      location: '',
+      status: '',
+      search: ''
+    });
+  };
+
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -72,11 +87,6 @@ const ResourcesPage = () => {
     hidden: { opacity: 0, y: 20 },
     visible: { opacity: 1, y: 0 }
   };
-
-  const filteredResources = resources.filter(r => 
-    r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (r.description && r.description.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
 
   return (
     <div className="bg-slate-50 min-h-screen pt-40 pb-40 relative overflow-hidden bg-blueprint">
@@ -104,6 +114,20 @@ const ResourcesPage = () => {
                   <p className="text-lg text-slate-500 font-medium leading-relaxed">
                     Explore our architectural and technical landmarks across the distributed campus network. Our facilities are engineered for the highest academic excellence.
                   </p>
+                </div>
+                
+                {/* Global Search in Category View */}
+                <div className="flex items-center gap-4 glass-heavy bg-white/70 p-2 rounded-3xl border border-white/40 shadow-xl self-start md:self-end">
+                  <div className="px-6 h-12 flex items-center gap-3 min-w-[320px]">
+                    <Search size={16} className="text-slate-400" />
+                    <input 
+                      type="text" 
+                      placeholder="Interrogate Global Registry..." 
+                      className="text-[10px] font-black uppercase tracking-widest text-slate-900 bg-transparent outline-none w-full placeholder:text-slate-300"
+                      value={filters.search}
+                      onChange={(e) => handleSearchChange(e.target.value)}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -146,7 +170,7 @@ const ResourcesPage = () => {
               {/* Resource View Header */}
               <div className="mb-12">
                 <button
-                  onClick={() => setSelectedCategory(null)}
+                  onClick={() => { setSelectedCategory(null); clearFilters(); }}
                   className="flex items-center gap-3 text-indigo-600 font-black tracking-widest uppercase text-[11px] mb-8 group"
                 >
                   <div className="w-8 h-8 rounded-full border border-indigo-100 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-all mr-2">
@@ -166,10 +190,10 @@ const ResourcesPage = () => {
                         <Search size={16} className="text-slate-400" />
                         <input 
                           type="text" 
-                          placeholder={`Search resources...`} 
-                          className="text-xs font-bold text-slate-900 bg-transparent outline-none w-full"
-                          value={searchQuery}
-                          onChange={(e) => setSearchQuery(e.target.value)}
+                          placeholder={`Search in ${selectedCategory.name}...`} 
+                          className="text-[10px] font-black uppercase tracking-widest text-slate-900 bg-transparent outline-none w-full"
+                          value={filters.search}
+                          onChange={(e) => handleSearchChange(e.target.value)}
                         />
                       </div>
                     </div>
@@ -180,7 +204,7 @@ const ResourcesPage = () => {
                     <select 
                       value={filters.type}
                       onChange={(e) => setFilters({...filters, type: e.target.value})}
-                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer"
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
                     >
                       <option value="">All Types</option>
                       <option value="room">Institutional Room</option>
@@ -191,33 +215,39 @@ const ResourcesPage = () => {
                     <select 
                       value={filters.status}
                       onChange={(e) => setFilters({...filters, status: e.target.value})}
-                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer"
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
                     >
                       <option value="">Any Status</option>
                       <option value="ACTIVE">ACTIVE</option>
                       <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
                     </select>
 
-                    <input 
-                      type="number"
-                      placeholder="Min Capacity"
-                      value={filters.minCapacity}
-                      onChange={(e) => setFilters({...filters, minCapacity: e.target.value})}
-                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-40"
-                    />
+                    <div className="relative">
+                       <MapPin size={12} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
+                       <input 
+                        type="text"
+                        placeholder="Spatial Coord..."
+                        value={filters.location}
+                        onChange={(e) => setFilters({...filters, location: e.target.value})}
+                        className="bg-white pl-12 pr-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-48 shadow-sm focus:border-indigo-200 transition-all"
+                      />
+                    </div>
 
-                    <input 
-                      type="text"
-                      placeholder="Location Filter"
-                      value={filters.location}
-                      onChange={(e) => setFilters({...filters, location: e.target.value})}
-                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-48"
-                    />
+                    <div className="relative">
+                      <Users size={12} className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-300" />
+                      <input 
+                        type="number"
+                        placeholder="Min Threshold"
+                        value={filters.minCapacity}
+                        onChange={(e) => setFilters({...filters, minCapacity: e.target.value})}
+                        className="bg-white pl-12 pr-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-44 shadow-sm focus:border-indigo-200 transition-all"
+                      />
+                    </div>
 
-                    {(filters.type || filters.status || filters.minCapacity || filters.location) && (
+                    {(filters.type || filters.status || filters.minCapacity || filters.location || filters.search) && (
                       <button 
-                        onClick={() => setFilters({ type: '', status: '', minCapacity: '', location: '' })}
-                        className="text-[10px] font-black text-rose-600 uppercase tracking-widest ml-2"
+                        onClick={clearFilters}
+                        className="text-[10px] font-black text-rose-600 uppercase tracking-widest px-4 py-2 hover:bg-rose-50 rounded-xl transition-all ml-2"
                       >
                         Reset Matrix
                       </button>
@@ -225,6 +255,7 @@ const ResourcesPage = () => {
                   </div>
                 </div>
               </div>
+
 
               {/* Resource Cards */}
               {loading ? (
@@ -238,14 +269,14 @@ const ResourcesPage = () => {
                   </motion.div>
                   <p className="mt-6 text-slate-400 font-bold uppercase tracking-[0.2em] text-[10px]">Retrieving Resources...</p>
                 </div>
-              ) : filteredResources.length > 0 ? (
+              ) : resources.length > 0 ? (
                 <motion.div 
                   variants={containerVariants}
                   initial="hidden"
                   animate="visible"
                   className="grid md:grid-cols-2 lg:grid-cols-3 gap-8"
                 >
-                  {filteredResources.map((resource) => (
+                  {resources.map((resource) => (
                     <motion.div
                       key={resource.id}
                       variants={itemVariants}

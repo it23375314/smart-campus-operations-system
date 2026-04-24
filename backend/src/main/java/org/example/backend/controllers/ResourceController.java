@@ -24,10 +24,11 @@ public class ResourceController {
             @RequestParam(required = false) String type,
             @RequestParam(required = false) Integer minCapacity,
             @RequestParam(required = false) String location,
-            @RequestParam(required = false) String status) {
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String search) {
         
-        if (type != null || minCapacity != null || location != null || status != null) {
-            return ResponseEntity.ok(resourceService.getFilteredResources(type, minCapacity, location, status));
+        if (type != null || minCapacity != null || location != null || status != null || search != null) {
+            return ResponseEntity.ok(resourceService.getFilteredResources(type, minCapacity, location, status, search));
         }
         
         if (category != null && !category.isEmpty()) {

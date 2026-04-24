@@ -243,5 +243,3 @@ const ResourceList = () => {
 };
 
 export default ResourceList;
-
-export default ResourceList;
