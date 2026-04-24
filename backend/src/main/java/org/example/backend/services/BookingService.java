@@ -14,7 +14,7 @@ import java.util.Map;
 
 public interface BookingService {
     BookingResponseDTO createBooking(BookingRequestDTO request, String currentUserId, Role currentUserRole);
-    List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String currentUserId, Role currentUserRole);
+    List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String status, String date, String search, String currentUserId, Role currentUserRole);
     BookingResponseDTO getBookingById(String id, String currentUserId, Role currentUserRole);
     BookingResponseDTO updateBooking(String id, BookingRequestDTO request, String currentUserId, Role currentUserRole);
     void deleteBooking(String id, String currentUserId, Role currentUserRole);
@@ -22,6 +22,7 @@ public interface BookingService {
     BookingResponseDTO rejectBooking(String id, String reason, String currentUserId, Role currentUserRole);
     BookingResponseDTO cancelBooking(String id, String currentUserId, Role currentUserRole);
     List<AvailabilitySlotDTO> getAvailability(String resourceId, LocalDate date);
+    boolean isTimeSlotAvailable(String resourceId, LocalDate date, java.time.LocalDateTime startTime, java.time.LocalDateTime endTime);
     AnalyticsSummaryDTO getSummaryAnalytics();
     List<ResourceUsageDTO> getPopularResources();
     List<PeakHourDTO> getPeakHours();

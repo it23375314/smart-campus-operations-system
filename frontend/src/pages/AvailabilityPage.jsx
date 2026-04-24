@@ -13,7 +13,7 @@ import {
   Filter
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import availabilityService from '../services/availabilityService';
+import bookingService from '../services/bookingService';
 import resourceService from '../services/resourceService';
 
 const AvailabilityPage = () => {
@@ -48,7 +48,7 @@ const AvailabilityPage = () => {
   const handleSearch = async () => {
     setLoading(true);
     try {
-      const data = await availabilityService.getAvailability(selectedResourceId, selectedDate);
+      const data = await bookingService.getAvailability(selectedResourceId, selectedDate);
       setSlots(data);
     } catch (error) {
       console.error("Error fetching availability:", error);

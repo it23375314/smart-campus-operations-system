@@ -1,11 +1,9 @@
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8085/api/resources';
+import API from './api';
 
 const resourceService = {
   getAllResources: async () => {
     try {
-      const response = await axios.get(API_BASE);
+      const response = await API.get('/resources');
       return response.data;
     } catch (error) {
       console.error('Error fetching resources:', error);
@@ -14,7 +12,7 @@ const resourceService = {
   },
   getResourceById: async (id) => {
     try {
-      const response = await axios.get(`${API_BASE}/${id}`);
+      const response = await API.get(`/resources/${id}`);
       return response.data;
     } catch (error) {
       console.error(`Error fetching resource ${id}:`, error);

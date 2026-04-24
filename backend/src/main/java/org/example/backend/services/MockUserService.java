@@ -1,5 +1,6 @@
 package org.example.backend.services;
 
+import org.example.backend.dtos.UserResponse;
 import org.example.backend.models.Role;
 import org.example.backend.models.User;
 import org.springframework.context.annotation.Profile;
@@ -11,7 +12,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Profile("mock")
-public class MockUserService {
+public class MockUserService implements UserService {
 
     private final List<User> mockUsers = new ArrayList<>();
 
@@ -34,11 +35,87 @@ public class MockUserService {
         return u;
     }
 
+    @Override
+    public List<UserResponse> getAllUsers() {
+        return mockUsers.stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole().name(),
+                        user.isActive()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public UserResponse getUserById(String id) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
+    }
+
+    @Override
+    public UserResponse updateUserRole(String id, String role) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(Role.valueOf(role.toUpperCase()));
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
+    }
+
+    @Override
+    public void deleteUser(String id) {
+        mockUsers.removeIf(u -> u.getId().equals(id));
+    }
+
+    @Override
+    public UserResponse deactivateUser(String id) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setActive(false);
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
+    }
+
+    @Override
     public List<User> getManagers() {
         return mockUsers.stream().filter(u -> u.getRole() == Role.MANAGER || u.getRole() == Role.ADMIN).collect(Collectors.toList());
     }
 
-    public List<User> getAllUsers() {
-        return mockUsers;
+    @Override
+    public User save(User user) {
+        if (user.getId() == null) {
+            user.setId("Mock-" + (mockUsers.size() + 1));
+        }
+        mockUsers.removeIf(u -> u.getId().equals(user.getId()));
+        mockUsers.add(user);
+        return user;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return mockUsers.stream().anyMatch(u -> u.getEmail().equals(email));
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return mockUsers.stream().filter(u -> u.getEmail().equals(email)).findFirst().orElse(null);
     }
 }

@@ -23,4 +23,8 @@ public class BookingResponseDTO {
     private BookingStatus status;
     private String rejectionReason;
     private LocalDateTime createdAt;
+
+    public BookingStatus getStatus() {
+        return status;
+    }
 }

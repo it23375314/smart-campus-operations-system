@@ -1,6 +1,6 @@
-
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Toaster } from 'react-hot-toast';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import BookingFormPage from './pages/BookingFormPage';
@@ -31,6 +31,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Toaster position="top-right" reverseOrder={false} />
       <Navbar />
       <main>
         <Routes>

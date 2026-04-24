@@ -26,6 +26,7 @@ import org.example.backend.dtos.AnalyticsSummaryDTO;
 import org.example.backend.dtos.ResourceUsageDTO;
 import org.example.backend.dtos.PeakHourDTO;
 import org.example.backend.repositories.ResourceRepository;
+import org.example.backend.repositories.UserRepository;
 
 import org.springframework.context.annotation.Profile;
 
@@ -39,22 +40,25 @@ public class MongoBookingService implements BookingService {
     @Autowired
     private ResourceRepository resourceRepository;
 
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private EmailService emailService;
+
     public BookingResponseDTO createBooking(BookingRequestDTO request, String currentUserId, Role currentUserRole) {
         // Enforce: Only USER can create bookings
         if (currentUserRole != Role.USER) {
             throw new ForbiddenException("Admins and Managers cannot create booking requests.");
         }
 
-        if (request.getStartTime().isAfter(request.getEndTime())) {
-            throw new IllegalArgumentException("Start time must be before end time");
+        if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().isEqual(request.getEndTime())) {
+            throw new IllegalArgumentException("Start time must be strictly before end time");
         }
 
-        // Conflict Detection: Only check against APPROVED bookings (Handled in Repo @Query)
-        List<Booking> conflicts = bookingRepository.findConflicts(
-                request.getResourceId(), request.getStartTime(), request.getEndTime());
-
-        if (!conflicts.isEmpty()) {
-            throw new ConflictException("The resource is already booked for this time slot.");
+        // Advanced Booking Conflict Checking
+        if (!isTimeSlotAvailable(request.getResourceId(), request.getStartTime().toLocalDate(), request.getStartTime(), request.getEndTime())) {
+            throw new ConflictException("Time slot is already booked");
         }
 
         Booking booking = new Booking();
@@ -71,21 +75,20 @@ public class MongoBookingService implements BookingService {
         return mapToDTO(savedBooking);
     }
 
-    public List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String currentUserId, Role currentUserRole) {
+    public List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String status, String date, String search, String currentUserId, Role currentUserRole) {
         // Security: USER can only see their own data, ADMIN/MANAGER see all
-        if (currentUserRole == Role.USER) {
-            userId = currentUserId; 
-        }
+        final String targetUserId = (currentUserRole == Role.USER) ? currentUserId : userId;
 
-        List<Booking> bookings;
-        if (userId != null) {
-            bookings = bookingRepository.findByUserId(userId);
-        } else if (resourceId != null) {
-            bookings = bookingRepository.findByResourceId(resourceId);
-        } else {
-            bookings = bookingRepository.findAll();
-        }
-        return bookings.stream().map(this::mapToDTO).collect(Collectors.toList());
+        List<Booking> bookings = bookingRepository.findAll();
+        
+        return bookings.stream()
+                .filter(b -> (targetUserId == null || b.getUserId().equalsIgnoreCase(targetUserId)))
+                .filter(b -> (resourceId == null || b.getResourceId().equalsIgnoreCase(resourceId)))
+                .filter(b -> (status == null || b.getStatus().name().equalsIgnoreCase(status)))
+                .filter(b -> (date == null || b.getStartTime().toLocalDate().toString().equals(date)))
+                .filter(b -> (search == null || b.getPurpose().toLowerCase().contains(search.toLowerCase()) || b.getUserId().toLowerCase().contains(search.toLowerCase())))
+                .map(this::mapToDTO)
+                .collect(Collectors.toList());
     }
 
     public BookingResponseDTO getBookingById(String id, String currentUserId, Role currentUserRole) {
@@ -141,26 +144,52 @@ public class MongoBookingService implements BookingService {
         if (currentUserRole != Role.ADMIN) {
             throw new ForbiddenException("Only Admins can approve bookings.");
         }
-        return updateStatus(id, BookingStatus.APPROVED, null);
+
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
+
+        if (!isTimeSlotAvailable(booking.getResourceId(), booking.getStartTime().toLocalDate(), booking.getStartTime(), booking.getEndTime())) {
+            throw new ConflictException("Time slot is already booked");
+        }
+
+        BookingResponseDTO response = updateStatus(id, BookingStatus.APPROVED, null);
+
+        // Asynchronous Notification Dispatch
+        userRepository.findById(response.getUserId()).ifPresent(user -> {
+            String resourceName = resourceRepository.findById(response.getResourceId())
+                    .map(r -> r.getName())
+                    .orElse("Unknown Resource");
+            emailService.sendBookingApprovedEmail(user.getEmail(), response, resourceName);
+        });
+
+        return response;
     }
 
     public BookingResponseDTO rejectBooking(String id, String reason, String currentUserId, Role currentUserRole) {
         if (currentUserRole != Role.ADMIN) {
             throw new ForbiddenException("Only Admins can reject bookings.");
         }
-        return updateStatus(id, BookingStatus.REJECTED, reason);
+        BookingResponseDTO response = updateStatus(id, BookingStatus.REJECTED, reason);
+
+        // Asynchronous Notification Dispatch
+        userRepository.findById(response.getUserId()).ifPresent(user -> {
+            emailService.sendBookingRejectedEmail(user.getEmail(), response.getPurpose(), reason);
+        });
+
+        return response;
     }
 
     public BookingResponseDTO cancelBooking(String id, String currentUserId, Role currentUserRole) {
-        if (currentUserRole != Role.USER) {
-            throw new ForbiddenException("Only Users can cancel their own bookings.");
-        }
-        
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Booking not found"));
+                .orElseThrow(() -> new ResourceNotFoundException("Booking synchronization target not found."));
 
-        if (!booking.getUserId().equals(currentUserId)) {
-            throw new ForbiddenException("You cannot cancel someone else's booking.");
+        // Logic: ADMIN can cancel any. Others only their OWN.
+        if (currentUserRole != Role.ADMIN && !booking.getUserId().equals(currentUserId)) {
+            throw new ForbiddenException("Unauthorized: Localized registry nodes can only decommission their own synchronization cycles.");
+        }
+
+        if (booking.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Synchronization cycle is already in CANCELLED state.");
         }
 
         return updateStatus(id, BookingStatus.CANCELLED, null);
@@ -207,13 +236,40 @@ public class MongoBookingService implements BookingService {
         return slots;
     }
 
+    @Override
+    public boolean isTimeSlotAvailable(String resourceId, LocalDate date, LocalDateTime startTime, LocalDateTime endTime) {
+        // Query database: Find bookings with same resource
+        List<Booking> resourceBookings = bookingRepository.findByResourceId(resourceId);
+
+        // Filter only APPROVED bookings matching the date
+        List<Booking> approvedForDate = resourceBookings.stream()
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED)
+                .filter(b -> b.getStartTime().toLocalDate().equals(date) || b.getEndTime().toLocalDate().equals(date))
+                .collect(Collectors.toList());
+
+        // Loop through results and check overlap condition
+        for (Booking existing : approvedForDate) {
+            // Two bookings conflict if: (startTime < existingEndTime) AND (endTime > existingStartTime)
+            if (startTime.isBefore(existing.getEndTime()) && endTime.isAfter(existing.getStartTime())) {
+                return false; // Conflict found
+            }
+        }
+        
+        return true;
+    }
+
     private BookingResponseDTO updateStatus(String id, BookingStatus status, String reason) {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Booking not found with id: " + id));
         
+        // Logical Gate: Only PENDING can be approved/rejected
+        if (booking.getStatus() != BookingStatus.PENDING && (status == BookingStatus.APPROVED || status == BookingStatus.REJECTED)) {
+            throw new IllegalStateException("Only synchronization requests in PENDING state can be processed. Current state: " + booking.getStatus());
+        }
+
         // Strict validation: Rejection MUST have a reason
         if (status == BookingStatus.REJECTED && (reason == null || reason.trim().isEmpty())) {
-            throw new IllegalArgumentException("A rejection reason must be provided.");
+            throw new IllegalArgumentException("A comprehensive rejection rationale must be provided.");
         }
 
         booking.setStatus(status);

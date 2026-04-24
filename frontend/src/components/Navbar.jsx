@@ -20,7 +20,10 @@ import {
   BarChart3,
   ListChecks,
   LineChart,
-  ChevronDown
+  ChevronDown,
+  ShieldHalf,
+  Command,
+  Settings2
 } from "lucide-react";
 import {
   getUnreadCount
@@ -86,18 +89,24 @@ const Navbar = () => {
   const commonItems = [
     { path: "/", label: "Home", icon: <Home size={18} /> },
     { path: "/resources", label: "Resources", icon: <Hexagon size={18} /> },
-    {
-      path: "/availability",
-      label: "Availability",
-      icon: <Activity size={18} />,
-    },
+    { path: "/availability", label: "Availability", icon: <Activity size={18} /> },
     { path: "/about", label: "About", icon: <Info size={18} /> },
   ];
 
   // Role-Specific logic
   const getRoleItems = () => {
     if (!user) return [];
+    if (user.role === 'USER') {
+      return [
+        { path: "/bookings", label: "Book Resource", icon: <PlusCircle size={18} /> },
+        { path: "/my-bookings", label: "My Bookings", icon: <User size={18} /> },
+      ];
+    }
+    return []; // Admin/Manager items moved to secondary dropdown
+  };
 
+  const getManagementItems = () => {
+    if (!user) return [];
     switch (user.role) {
       case "ADMIN":
         return [
@@ -112,24 +121,13 @@ const Navbar = () => {
           { path: '/admin/analytics', label: 'Operational Analytics', icon: <BarChart3 size={18} /> },
           { path: '/admin', label: 'Analytics Dashboard', icon: <LineChart size={18} /> },
         ];
-      case "USER":
       default:
-        return [
-          {
-            path: "/bookings",
-            label: "Book Resource",
-            icon: <PlusCircle size={18} />,
-          },
-          {
-            path: "/my-bookings",
-            label: "My Bookings",
-            icon: <User size={18} />,
-          },
-        ];
+        return [];
     }
   };
 
   const navItems = [...commonItems, ...getRoleItems()];
+  const managementItems = getManagementItems();
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
@@ -138,40 +136,75 @@ const Navbar = () => {
         <Link to="/" className="flex items-center gap-4 group">
           <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all shadow-2xl bg-indigo-600 shadow-indigo-200"
+            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all shadow-2xl bg-indigo-600 shadow-indigo-100"
           >
-            <Layout size={28} />
+            <ShieldHalf size={26} />
           </motion.div>
           <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tight leading-none transition-colors text-slate-800">
+            <span className="text-2xl font-black tracking-tight leading-none text-slate-900 group-hover:text-indigo-600 transition-colors">
               SmartCampus
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] transition-colors text-indigo-500">
-              Excellence Portal
+            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-500/80">
+              Governance Portal
             </span>
           </div>
         </Link>
 
         {/* Main Nav */}
-        <div className="hidden lg:flex items-center gap-1.5 p-1 rounded-2xl border transition-all bg-slate-900/5 border-slate-900/5">
+        <div className="hidden lg:flex items-center gap-1 p-1 rounded-[1.25rem] bg-slate-100 border border-slate-200/50">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               className={({ isActive }) => `
-                relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-sm overflow-hidden group
+                relative flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-all text-[13px] group
                 ${
                   isActive
-                    ? "bg-white text-indigo-700 shadow-sm active border border-indigo-100/50"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
+                    ? "bg-white text-indigo-700 shadow-md border border-indigo-100/50"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white/40"
                 }
               `}
             >
-              {item.icon}
-              {item.label}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 transition-all opacity-0 group-[.active]:opacity-100 bg-indigo-600" />
+              {({ isActive }) => (
+                <>
+                  <span className={`${isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'} transition-colors`}>
+                    {item.icon}
+                  </span>
+                  {item.label}
+                </>
+              )}
             </NavLink>
           ))}
+
+          {managementItems.length > 0 && (
+            <div className="h-6 w-px bg-slate-200 mx-2" />
+          )}
+
+          {managementItems.length > 0 && (
+             <div className="relative group/mgmt">
+                <button className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-[13px] text-slate-500 hover:text-indigo-700 hover:bg-white/40 transition-all">
+                  <Command size={18} className="text-indigo-500" />
+                  Management
+                  <ChevronDown size={14} className="group-hover/mgmt:rotate-180 transition-transform" />
+                </button>
+                
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl py-3 opacity-0 invisible translate-y-2 group-hover/mgmt:opacity-100 group-hover/mgmt:visible group-hover/mgmt:translate-y-0 transition-all z-[200]">
+                  {managementItems.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({ isActive }) => `
+                        flex items-center gap-3 px-5 py-3 text-sm font-bold transition-all
+                        ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'}
+                      `}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+             </div>
+          )}
         </div>
 
         {/* User Actions */}

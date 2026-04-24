@@ -20,6 +20,11 @@ import org.example.backend.dtos.AnalyticsSummaryDTO;
 import org.example.backend.dtos.ResourceUsageDTO;
 import org.example.backend.dtos.PeakHourDTO;
 import org.example.backend.services.ResourceService;
+import org.example.backend.services.PdfGeneratorService;
+import org.springframework.core.io.InputStreamResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import java.io.ByteArrayInputStream;
 
 @RestController
 @RequestMapping("/api/bookings")
@@ -31,6 +36,9 @@ public class BookingController {
 
     @Autowired
     private ResourceService resourceService;
+
+    @Autowired
+    private PdfGeneratorService pdfGeneratorService;
 
     // USER: Create booking
     @PostMapping
@@ -49,7 +57,7 @@ public class BookingController {
         if (currentUserRole != Role.USER) {
             throw new ForbiddenException("This endpoint is for students/users only.");
         }
-        return ResponseEntity.ok(bookingService.getAllBookings(currentUserId, null, currentUserId, currentUserRole));
+        return ResponseEntity.ok(bookingService.getAllBookings(currentUserId, null, null, null, null, currentUserId, currentUserRole));
     }
 
     // ADMIN/MANAGER: View all bookings with optional filtering
@@ -57,12 +65,15 @@ public class BookingController {
     public ResponseEntity<List<BookingResponseDTO>> getAllBookings(
             @RequestParam(required = false) String userId,
             @RequestParam(required = false) String resourceId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String search,
             @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         if (currentUserRole == Role.USER) {
             throw new ForbiddenException("Users cannot access the global bookings list. Use /my instead.");
         }
-        return ResponseEntity.ok(bookingService.getAllBookings(userId, resourceId, currentUserId, currentUserRole));
+        return ResponseEntity.ok(bookingService.getAllBookings(userId, resourceId, status, date, search, currentUserId, currentUserRole));
     }
 
     @GetMapping("/{id}")
@@ -81,6 +92,18 @@ public class BookingController {
             @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.updateBooking(id, request, currentUserId, currentUserRole));
+    }
+
+    // ADMIN: Override Cancel Booking (System Level Control)
+    @DeleteMapping("/{id}")
+    public ResponseEntity<BookingResponseDTO> adminCancelBooking(
+            @PathVariable String id,
+            @RequestHeader("X-User-Id") String currentUserId,
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        if (currentUserRole != Role.ADMIN) {
+            throw new ForbiddenException("Only Admins can override and cancel bookings.");
+        }
+        return ResponseEntity.ok(bookingService.cancelBooking(id, currentUserId, currentUserRole));
     }
 
     // ADMIN: Approve
@@ -166,5 +189,59 @@ public class BookingController {
             throw new ForbiddenException("Unauthorized to view analytics.");
         }
         return ResponseEntity.ok(bookingService.getPeakHours());
+    }
+
+    // DOWNLOAD: Single Booking PDF
+    @GetMapping("/{id}/pdf")
+    public ResponseEntity<InputStreamResource> downloadBookingPdf(
+            @PathVariable String id,
+            @RequestHeader("X-User-Id") String currentUserId,
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        
+        BookingResponseDTO booking = bookingService.getBookingById(id, currentUserId, currentUserRole);
+        String resourceName = resourceService.getResourceById(booking.getResourceId())
+                .map(r -> r.getName())
+                .orElse("Unknown Resource");
+
+        ByteArrayInputStream bis = pdfGeneratorService.generateBookingConfirmation(booking, resourceName);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "inline; filename=booking_confirmation_" + id + ".pdf");
+
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(bis));
+    }
+
+    // DOWNLOAD: Manager Report PDF
+    @GetMapping("/report/pdf")
+    public ResponseEntity<InputStreamResource> downloadReportPdf(
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String resourceId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String date,
+            @RequestParam(required = false) String search,
+            @RequestHeader("X-User-Id") String currentUserId,
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        
+        if (currentUserRole == Role.USER) {
+            throw new ForbiddenException("Unauthorized: Localized users cannot export global administrative records.");
+        }
+
+        List<BookingResponseDTO> bookings = bookingService.getAllBookings(userId, resourceId, status, date, search, currentUserId, currentUserRole);
+        Map<String, Long> stats = bookingService.getStats();
+
+        ByteArrayInputStream bis = pdfGeneratorService.generateBookingReport(bookings, stats);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Content-Disposition", "inline; filename=institutional_booking_report.pdf");
+
+        return ResponseEntity
+                .ok()
+                .headers(headers)
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(new InputStreamResource(bis));
     }
 }
