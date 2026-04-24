@@ -347,32 +347,18 @@ public class MongoBookingService implements BookingService {
     }
 
     public Map<String, Object> getAnalytics() {
-        long total = bookingRepository.count();
-        long approved = bookingRepository.countByStatus(BookingStatus.APPROVED);
-        long rejected = bookingRepository.countByStatus(BookingStatus.REJECTED);
-        long pending = bookingRepository.countByStatus(BookingStatus.PENDING);
-
         Map<String, Object> analytics = new HashMap<>();
-        analytics.put("total", total);
-        analytics.put("approved", approved);
-        analytics.put("rejected", rejected);
-        analytics.put("pending", pending);
-        analytics.put("ratio", total > 0 ? (double) approved / total * 100 : 0);
-        
-        // Simulating usage trends for the UI
-        analytics.put("usageTrends", "Resource Res-101 (Auditorium) is at 85% capacity this week.");
-        analytics.put("peakTimes", "Weekdays 10:00 AM - 02:00 PM");
-        
+        analytics.put("mostUsedResources", getPopularResources());
+        analytics.put("peakBookingHours", getPeakHours());
         return analytics;
     }
 
     public java.util.Map<String, Long> getStats() {
         java.util.Map<String, Long> stats = new java.util.HashMap<>();
-        stats.put("total", bookingRepository.count());
-        stats.put("pending", bookingRepository.countByStatus(BookingStatus.PENDING));
-        stats.put("approved", bookingRepository.countByStatus(BookingStatus.APPROVED));
-        stats.put("rejected", bookingRepository.countByStatus(BookingStatus.REJECTED));
-        stats.put("cancelled", bookingRepository.countByStatus(BookingStatus.CANCELLED));
+        stats.put("totalBookings", bookingRepository.count());
+        stats.put("pendingBookings", bookingRepository.countByStatus(BookingStatus.PENDING));
+        stats.put("approvedBookings", bookingRepository.countByStatus(BookingStatus.APPROVED));
+        stats.put("rejectedBookings", bookingRepository.countByStatus(BookingStatus.REJECTED));
         return stats;
     }
 

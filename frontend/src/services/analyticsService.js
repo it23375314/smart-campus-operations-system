@@ -1,18 +1,13 @@
 import API from './api';
 
 const analyticsService = {
-  getSummary: async () => {
-    const response = await API.get('/bookings/analytics/summary');
+  getStats: async () => {
+    const response = await API.get('/bookings/stats');
     return response.data;
   },
 
-  getPopularResources: async () => {
-    const response = await API.get('/bookings/analytics/popular-resources');
-    return response.data;
-  },
-
-  getPeakHours: async () => {
-    const response = await API.get('/bookings/analytics/peak-hours');
+  getAnalytics: async () => {
+    const response = await API.get('/bookings/analytics');
     return response.data;
   }
 };
