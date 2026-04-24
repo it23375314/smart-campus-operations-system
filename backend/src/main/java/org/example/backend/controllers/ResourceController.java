@@ -20,7 +20,16 @@ public class ResourceController {
 
     @GetMapping
     public ResponseEntity<List<Resource>> getAllResources(
-            @RequestParam(required = false) String category) {
+            @RequestParam(required = false) String category,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false) String status) {
+        
+        if (type != null || minCapacity != null || location != null || status != null) {
+            return ResponseEntity.ok(resourceService.getFilteredResources(type, minCapacity, location, status));
+        }
+        
         if (category != null && !category.isEmpty()) {
             return ResponseEntity.ok(resourceService.getResourcesByCategory(category));
         }

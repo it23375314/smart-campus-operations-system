@@ -28,9 +28,15 @@ public class Resource {
     @NotBlank(message = "Category is required")
     private String category;
 
+    @NotBlank(message = "Resource type is required")
+    private String type; // room, lab, equipment
+
+    @NotBlank(message = "Location is required")
+    private String location;
+
     private String description;
 
-    @PositiveOrZero(message = "Capacity must be zero or positive")
+    @jakarta.validation.constraints.Min(value = 1, message = "Capacity must be at least 1")
     private int capacity;
 
     private String imageUrl;

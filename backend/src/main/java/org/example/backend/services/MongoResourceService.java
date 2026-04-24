@@ -26,6 +26,15 @@ public class MongoResourceService implements ResourceService {
         return resourceRepository.findByCategory(category);
     }
 
+    public List<Resource> getFilteredResources(String type, Integer minCapacity, String location, String status) {
+        return resourceRepository.findAll().stream()
+                .filter(r -> (type == null || r.getType().equalsIgnoreCase(type)))
+                .filter(r -> (minCapacity == null || r.getCapacity() >= minCapacity))
+                .filter(r -> (location == null || r.getLocation().equalsIgnoreCase(location)))
+                .filter(r -> (status == null || r.getStatus().name().equalsIgnoreCase(status)))
+                .toList();
+    }
+
     public Optional<Resource> getResourceById(String id) {
         return resourceRepository.findById(id);
     }
@@ -38,6 +47,8 @@ public class MongoResourceService implements ResourceService {
         return resourceRepository.findById(id).map(resource -> {
             resource.setName(resourceDetails.getName());
             resource.setCategory(resourceDetails.getCategory());
+            resource.setType(resourceDetails.getType());
+            resource.setLocation(resourceDetails.getLocation());
             resource.setDescription(resourceDetails.getDescription());
             resource.setCapacity(resourceDetails.getCapacity());
             resource.setImageUrl(resourceDetails.getImageUrl());

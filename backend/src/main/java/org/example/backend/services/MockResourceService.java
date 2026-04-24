@@ -68,6 +68,16 @@ public class MockResourceService implements ResourceService {
     }
 
     @Override
+    public List<Resource> getFilteredResources(String type, Integer minCapacity, String location, String status) {
+        return mockResources.stream()
+                .filter(r -> (type == null || r.getType() != null && r.getType().equalsIgnoreCase(type)))
+                .filter(r -> (minCapacity == null || r.getCapacity() >= minCapacity))
+                .filter(r -> (location == null || r.getLocation() != null && r.getLocation().equalsIgnoreCase(location)))
+                .filter(r -> (status == null || r.getStatus().name().equalsIgnoreCase(status)))
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public Optional<Resource> getResourceById(String id) {
         return mockResources.stream().filter(r -> r.getId().equals(id)).findFirst();
     }
@@ -84,6 +94,8 @@ public class MockResourceService implements ResourceService {
         return getResourceById(id).map(r -> {
             r.setName(details.getName());
             r.setCategory(details.getCategory());
+            r.setType(details.getType());
+            r.setLocation(details.getLocation());
             r.setDescription(details.getDescription());
             r.setCapacity(details.getCapacity());
             return r;

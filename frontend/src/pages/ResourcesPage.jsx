@@ -17,8 +17,9 @@ import {
   Calendar,
   Clock
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import API from '../services/api';
+import { Link, useNavigate } from 'react-router-dom';
+import resourceService from '../services/resourceService';
+import toast from 'react-hot-toast';
 
 const ResourcesPage = () => {
   const [selectedCategory, setSelectedCategory] = useState(null);
@@ -28,26 +29,35 @@ const ResourcesPage = () => {
 
   const CATEGORIES = [
     { id: 'Auditorium', name: "Auditoriums", icon: <Building2 />, desc: "High-capacity venues for symposiums and major events.", img: "https://images.unsplash.com/photo-1540317580384-e5d43616b9aa?q=80&w=1200" },
-    { id: 'Laboratory', name: "Research Labs", icon: <Microscope />, desc: "State-of-the-art facilities for technical and scientific research.", img: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?q=80&w=1200" },
+    { id: 'Laboratory', name: "Labs & Research", icon: <Microscope />, desc: "State-of-the-art facilities for technical and scientific research.", img: "https://images.unsplash.com/photo-1582719471384-894fbb16e074?q=80&w=1200" },
     { id: 'Equipment', name: "Assets & Tools", icon: <Zap />, desc: "Specialized equipment and devices for academic projects.", img: "https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&w=1200" },
     { id: 'Classroom', name: "Classrooms", icon: <GraduationCap />, desc: "Modern learning environments with smart infrastructure.", img: "https://images.unsplash.com/photo-1580582932707-520aed937b7b?q=80&w=1200" },
-    { id: 'Sports', name: "Sports Facilities", icon: <Activity />, desc: "Professional athletic grounds and indoor sports arenas.", img: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1200" },
-    { id: 'Other', name: "Miscellaneous", icon: <MoreHorizontal />, desc: "Various other campus resources and shared spaces.", img: "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200" }
+    { id: 'Sports', name: "Sports Facilities", icon: <Activity />, desc: "Professional athletic grounds and indoor sports arenas.", img: "https://images.unsplash.com/photo-1540747913346-19e32dc3e97e?q=80&w=1200" }
   ];
 
+  const [filters, setFilters] = useState({
+    type: '',
+    minCapacity: '',
+    location: '',
+    status: ''
+  });
+  const [selectedResource, setSelectedResource] = useState(null);
+  const navigate = useNavigate();
+
   useEffect(() => {
-    if (selectedCategory) {
-      fetchResources();
-    }
-  }, [selectedCategory]);
+    fetchResources();
+  }, [selectedCategory, filters]);
 
   const fetchResources = async () => {
     setLoading(true);
     try {
-      const res = await API.get(`/resources?category=${selectedCategory.id}`);
-      setResources(res.data);
+      const activeFilters = { ...filters };
+      if (selectedCategory) activeFilters.category = selectedCategory.id;
+      
+      const data = await resourceService.getAllResources(activeFilters);
+      setResources(data);
     } catch (err) {
-      console.error("Failed to fetch resources:", err);
+      toast.error("Failed to retrieve campus assets.");
     } finally {
       setLoading(false);
     }
@@ -144,23 +154,74 @@ const ResourcesPage = () => {
                   </div>
                   Back to Categories
                 </button>
-                <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
-                  <div>
-                    <h2 className="text-6xl font-prestige text-slate-900 leading-tight mb-4">{selectedCategory.name}</h2>
-                    <p className="text-lg text-slate-500 font-medium max-w-2xl">{selectedCategory.desc}</p>
-                  </div>
-                  
-                  <div className="flex items-center gap-4 glass-heavy bg-white/70 p-2 rounded-2xl border border-white/40 shadow-xl">
-                    <div className="px-6 h-12 flex items-center gap-3 min-w-[300px]">
-                      <Search size={16} className="text-slate-400" />
-                      <input 
-                        type="text" 
-                        placeholder={`Search in ${selectedCategory.name}...`} 
-                        className="text-xs font-bold text-slate-900 bg-transparent outline-none w-full"
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                      />
+                <div className="flex flex-col gap-8 w-full">
+                  <div className="flex flex-wrap items-center justify-between gap-6">
+                    <div>
+                      <h2 className="text-6xl font-prestige text-slate-900 leading-tight mb-4">{selectedCategory.name}</h2>
+                      <p className="text-lg text-slate-500 font-medium max-w-2xl">{selectedCategory.desc}</p>
                     </div>
+                    
+                    <div className="flex items-center gap-4 glass-heavy bg-white/70 p-2 rounded-3xl border border-white/40 shadow-xl">
+                      <div className="px-6 h-12 flex items-center gap-3 min-w-[280px]">
+                        <Search size={16} className="text-slate-400" />
+                        <input 
+                          type="text" 
+                          placeholder={`Search resources...`} 
+                          className="text-xs font-bold text-slate-900 bg-transparent outline-none w-full"
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Operational Filters */}
+                  <div className="flex flex-wrap gap-4 items-center">
+                    <select 
+                      value={filters.type}
+                      onChange={(e) => setFilters({...filters, type: e.target.value})}
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer"
+                    >
+                      <option value="">All Types</option>
+                      <option value="room">Institutional Room</option>
+                      <option value="lab">Research Laboratory</option>
+                      <option value="equipment">Specialized Equipment</option>
+                    </select>
+
+                    <select 
+                      value={filters.status}
+                      onChange={(e) => setFilters({...filters, status: e.target.value})}
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer"
+                    >
+                      <option value="">Any Status</option>
+                      <option value="ACTIVE">ACTIVE</option>
+                      <option value="OUT_OF_SERVICE">OUT OF SERVICE</option>
+                    </select>
+
+                    <input 
+                      type="number"
+                      placeholder="Min Capacity"
+                      value={filters.minCapacity}
+                      onChange={(e) => setFilters({...filters, minCapacity: e.target.value})}
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-40"
+                    />
+
+                    <input 
+                      type="text"
+                      placeholder="Location Filter"
+                      value={filters.location}
+                      onChange={(e) => setFilters({...filters, location: e.target.value})}
+                      className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none w-48"
+                    />
+
+                    {(filters.type || filters.status || filters.minCapacity || filters.location) && (
+                      <button 
+                        onClick={() => setFilters({ type: '', status: '', minCapacity: '', location: '' })}
+                        className="text-[10px] font-black text-rose-600 uppercase tracking-widest ml-2"
+                      >
+                        Reset Matrix
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -209,12 +270,20 @@ const ResourcesPage = () => {
                       </div>
                       
                       <div className="p-10 flex-1 flex flex-col">
-                        <div className="flex justify-between items-start mb-6">
-                          <div>
-                            <h4 className="text-2xl font-prestige text-slate-900 mb-2">{resource.name}</h4>
-                            <div className="flex items-center gap-2 text-slate-400 text-[10px] font-black uppercase tracking-widest">
-                               <Users size={12} className="text-indigo-500" />
+                        <div className="flex flex-col mb-6">
+                          <h4 className="text-2xl font-prestige text-slate-900 mb-4">{resource.name}</h4>
+                          <div className="flex flex-wrap gap-4">
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                               <MapPin size={12} className="text-indigo-500" />
+                               {resource.location || "North Wing"}
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                               <Users size={12} className="text-sky-500" />
                                Capacity: {resource.capacity}
+                            </div>
+                            <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-100 rounded-full text-slate-400 text-[10px] font-black uppercase tracking-widest">
+                               <Activity size={12} className="text-rose-500" />
+                               {resource.type || "Room"}
                             </div>
                           </div>
                         </div>
@@ -224,15 +293,14 @@ const ResourcesPage = () => {
                         </p>
                         
                         <div className="mt-auto flex items-center justify-between">
-                           <Link 
-                             to="/bookings" 
-                             state={{ resourceId: resource.id }}
-                             className="inline-flex items-center gap-3 px-6 py-3 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
+                           <button 
+                             onClick={() => setSelectedResource(resource)}
+                             className="inline-flex items-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
                            >
-                              Book Space <Zap size={12} fill="currentColor" />
-                           </Link>
+                              View Brief <ChevronRight size={12} />
+                           </button>
                            <div className="text-[10px] font-black text-slate-200 group-hover:text-indigo-600 transition-colors uppercase tracking-widest">
-                             Prestige Series
+                             {resource.id}
                            </div>
                         </div>
                       </div>
@@ -250,6 +318,126 @@ const ResourcesPage = () => {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Resource Details Modal */}
+      <AnimatePresence>
+        {selectedResource && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[200] flex items-center justify-center p-6 bg-slate-900/60 backdrop-blur-md"
+          >
+            <motion.div 
+              initial={{ scale: 0.95, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 20 }}
+              className="w-full max-w-5xl bg-white rounded-[4rem] overflow-hidden shadow-2xl flex flex-col md:flex-row relative"
+            >
+              <button 
+                onClick={() => setSelectedResource(null)}
+                className="absolute top-8 right-8 w-12 h-12 rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center text-slate-900 z-10 hover:bg-white transition-all shadow-xl"
+              >
+                <ArrowLeft className="rotate-90 md:rotate-0" size={18} />
+              </button>
+
+              <div className="md:w-1/2 h-[400px] md:h-auto bg-slate-100">
+                {selectedResource.imageUrl ? (
+                  <img src={selectedResource.imageUrl} className="w-full h-full object-cover" alt={selectedResource.name} />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-300">
+                    <Building2 size={80} />
+                  </div>
+                )}
+              </div>
+
+              <div className="md:w-1/2 p-12 md:p-20 overflow-y-auto max-h-[90vh]">
+                <div className="flex items-center gap-3 mb-8">
+                  <span className="px-5 py-2 bg-indigo-50 text-indigo-600 text-[10px] font-black tracking-widest uppercase rounded-full border border-indigo-100">
+                    {selectedResource.category}
+                  </span>
+                  <span className={`px-5 py-2 text-white text-[10px] font-black tracking-widest uppercase rounded-full shadow-lg ${
+                    selectedResource.status === 'ACTIVE' || selectedResource.status === 'AVAILABLE' ? 'bg-emerald-500' : 'bg-rose-500'
+                  }`}>
+                    {selectedResource.status}
+                  </span>
+                </div>
+
+                <h2 className="text-5xl font-prestige text-slate-900 mb-8">{selectedResource.name}</h2>
+                
+                <div className="grid md:grid-cols-2 gap-8 mb-12">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <MapPin size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Location</p>
+                      <p className="text-sm font-bold text-slate-900">{selectedResource.location || "Campus North Wing"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Users size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Capacity</p>
+                      <p className="text-sm font-bold text-slate-900">{selectedResource.capacity} Persons</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Activity size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Type</p>
+                      <p className="text-sm font-bold text-slate-900 uppercase tracking-widest">{selectedResource.type || "Official Venue"}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                      <Zap size={20} />
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset ID</p>
+                      <p className="text-sm font-bold text-slate-900">{selectedResource.id}</p>
+                    </div>
+                  </div>
+                </div>
+
+                <p className="text-lg text-slate-500 font-medium leading-relaxed mb-12">
+                  {selectedResource.description || "A premier institutional asset designed for multifaceted academic operations and high-end collaborative engagements."}
+                </p>
+
+                <div className="flex flex-wrap gap-4">
+                  <button 
+                    onClick={() => {
+                      navigate(`/availability?resourceId=${selectedResource.id}`);
+                      setSelectedResource(null);
+                    }}
+                    className="flex-1 min-w-[200px] h-16 bg-slate-900 text-white rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-500/20 active:scale-95"
+                  >
+                    Check Availability
+                  </button>
+                  <button 
+                    onClick={() => {
+                      navigate('/bookings', { state: { resourceId: selectedResource.id } });
+                      setSelectedResource(null);
+                    }}
+                    className={`flex-1 min-w-[200px] h-16 border-2 font-black text-[11px] uppercase tracking-widest rounded-3xl transition-all ${
+                      selectedResource.status === 'OUT_OF_SERVICE' 
+                      ? 'border-slate-100 text-slate-300 cursor-not-allowed' 
+                      : 'border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white'
+                    }`}
+                    disabled={selectedResource.status === 'OUT_OF_SERVICE'}
+                  >
+                    {selectedResource.status === 'OUT_OF_SERVICE' ? 'Asset Unavailable' : 'Request Registry'}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

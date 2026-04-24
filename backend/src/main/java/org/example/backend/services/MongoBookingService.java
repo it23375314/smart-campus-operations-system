@@ -56,6 +56,17 @@ public class MongoBookingService implements BookingService {
             throw new IllegalArgumentException("Start time must be strictly before end time");
         }
 
+        org.example.backend.models.Resource resource = resourceRepository.findById(request.getResourceId())
+                .orElseThrow(() -> new org.example.backend.exceptions.ResourceNotFoundException("Resource not found"));
+
+        if (resource.getStatus() == org.example.backend.models.ResourceStatus.OUT_OF_SERVICE) {
+            throw new IllegalStateException("Institutional Protocol: Resource is currently OUT_OF_SERVICE and cannot be synthesized into a booking.");
+        }
+
+        if (request.getAttendees() > resource.getCapacity()) {
+            throw new IllegalArgumentException("Capacity Overflow: Attendee count (" + request.getAttendees() + ") exceeds the institutional capacity limit of " + resource.getCapacity() + " for this resource.");
+        }
+
         // Advanced Booking Conflict Checking
         if (!isTimeSlotAvailable(request.getResourceId(), request.getStartTime().toLocalDate(), request.getStartTime(), request.getEndTime())) {
             throw new ConflictException("Time slot is already booked");
