@@ -414,7 +414,7 @@ const ResourcesPage = () => {
                       navigate(`/availability?resourceId=${selectedResource.id}`);
                       setSelectedResource(null);
                     }}
-                    className="flex-1 min-w-[200px] h-16 bg-slate-900 text-white rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-2xl shadow-indigo-500/20 active:scale-95"
+                    className="flex-1 min-w-[200px] h-16 bg-white border-2 border-slate-900 text-slate-900 rounded-3xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all shadow-xl active:scale-95"
                   >
                     Check Availability
                   </button>
@@ -423,16 +423,21 @@ const ResourcesPage = () => {
                       navigate('/bookings', { state: { resourceId: selectedResource.id } });
                       setSelectedResource(null);
                     }}
-                    className={`flex-1 min-w-[200px] h-16 border-2 font-black text-[11px] uppercase tracking-widest rounded-3xl transition-all ${
+                    className={`flex-1 min-w-[200px] h-16 font-black text-[11px] uppercase tracking-widest rounded-3xl transition-all shadow-2xl ${
                       selectedResource.status === 'OUT_OF_SERVICE' 
-                      ? 'border-slate-100 text-slate-300 cursor-not-allowed' 
-                      : 'border-slate-900 text-slate-900 hover:bg-slate-900 hover:text-white'
+                      ? 'bg-slate-100 text-slate-300 cursor-not-allowed border border-slate-200' 
+                      : 'bg-slate-900 text-white hover:bg-indigo-600 shadow-indigo-500/20 active:scale-95'
                     }`}
                     disabled={selectedResource.status === 'OUT_OF_SERVICE'}
                   >
-                    {selectedResource.status === 'OUT_OF_SERVICE' ? 'Asset Unavailable' : 'Request Registry'}
+                    {selectedResource.status === 'OUT_OF_SERVICE' ? 'Resource Unavailable' : 'Book Now'}
                   </button>
                 </div>
+                {selectedResource.status === 'OUT_OF_SERVICE' && (
+                  <p className="mt-4 text-center text-rose-500 font-black uppercase tracking-widest text-[9px] flex items-center justify-center gap-2">
+                    <AlertCircle size={12} /> Institutional Notice: Resource is currently unavailable for synchronization.
+                  </p>
+                )}
               </div>
             </motion.div>
           </motion.div>

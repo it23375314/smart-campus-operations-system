@@ -12,14 +12,20 @@ import {
   Building2,
   Filter
 } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import bookingService from '../services/bookingService';
 import resourceService from '../services/resourceService';
 
+const useQuery = () => {
+  return new URLSearchParams(useLocation().search);
+};
+
 const AvailabilityPage = () => {
-  const navigate = useNavigate();
+  const query = useQuery();
+  const queryResourceId = query.get('resourceId');
+  
   const [resources, setResources] = useState([]);
-  const [selectedResourceId, setSelectedResourceId] = useState('');
+  const [selectedResourceId, setSelectedResourceId] = useState(queryResourceId || '');
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
   const [slots, setSlots] = useState([]);
   const [loading, setLoading] = useState(false);
