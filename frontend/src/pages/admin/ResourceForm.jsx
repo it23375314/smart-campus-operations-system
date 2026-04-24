@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Upload, Save, Loader2 } from 'lucide-react';
+import { ArrowLeft, Upload, Save, Loader2, Image as ImageIcon, X } from 'lucide-react';
 import API from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -32,6 +32,10 @@ const ResourceForm = () => {
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  
+  // Image Upload State
+  const [selectedFile, setSelectedFile] = useState(null);
+  const [previewUrl, setPreviewUrl] = useState('');
 
   useEffect(() => {
     const fetchManagers = async () => {
@@ -54,6 +58,7 @@ const ResourceForm = () => {
           availableDays: res.data.availableDays || [],
           availableTimes: res.data.availableTimes || { start: '08:00', end: '18:00' },
         });
+        if (res.data.imageUrl) setPreviewUrl(res.data.imageUrl);
       } catch {
         setError('Failed to load resource. It may not exist.');
       } finally {
@@ -77,28 +82,55 @@ const ResourceForm = () => {
     }
   };
 
-  const handleDayToggle = day => {
-    setForm(prev => ({
-      ...prev,
-      availableDays: prev.availableDays.includes(day)
-        ? prev.availableDays.filter(d => d !== day)
-        : [...prev.availableDays, day],
-    }));
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setSelectedFile(file);
+      setPreviewUrl(URL.createObjectURL(file));
+    }
   };
 
-  const handleTimeChange = (key, value) => {
-    setForm(prev => ({
-      ...prev,
-      availableTimes: { ...prev.availableTimes, [key]: value },
-    }));
+  const handleRemovePreview = () => {
+    setSelectedFile(null);
+    setPreviewUrl(form.imageUrl || '');
+  };
+
+  const uploadImage = async () => {
+    if (!selectedFile) return form.imageUrl;
+    
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+    
+    try {
+      const res = await API.post('/resources/upload-image', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      return res.data.imageUrl;
+    } catch (err) {
+      console.error("Image upload protocol failure:", err);
+      throw new Error("Failed to synchronize asset imagery with the local registry.");
+    }
   };
 
   const handleSubmit = async e => {
     e.preventDefault();
     setError('');
     setSaving(true);
-    const payload = { ...form, capacity: Number(form.capacity) };
+    
     try {
+      // 1. Interrogate and Synchronize Visualization
+      let synchronizedImageUrl = form.imageUrl;
+      if (selectedFile) {
+        synchronizedImageUrl = await uploadImage();
+      }
+
+      // 2. Commit Resource Data
+      const payload = { 
+        ...form, 
+        capacity: Number(form.capacity),
+        imageUrl: synchronizedImageUrl
+      };
+
       if (isEdit) {
         await API.put(`/resources/${id}`, payload);
         toast.success("Asset registry updated successfully.");
@@ -108,8 +140,8 @@ const ResourceForm = () => {
       }
       navigate('/admin/resources');
     } catch (err) {
-      setError(err.response?.data?.message || 'An error occurred. Please check the form and try again.');
-      toast.error("Registry submission failure.");
+      setError(err.message || 'An error occurred. Please check the form and try again.');
+      toast.error(err.message || "Registry submission failure.");
     } finally {
       setSaving(false);
     }
@@ -135,7 +167,6 @@ const ResourceForm = () => {
       </button>
 
       <div className="bg-white rounded-[3rem] border border-slate-200 shadow-2xl overflow-hidden glass-heavy">
-        {/* Form header */}
         <div className="p-10 border-b border-slate-50">
           <h3 className="text-3xl font-prestige text-slate-900">
             {isEdit ? 'Update Asset.' : 'Register Asset.'}
@@ -153,7 +184,36 @@ const ResourceForm = () => {
             </div>
           )}
 
-          {/* Name */}
+          {/* Visualization synchronization */}
+          <div className="space-y-4">
+             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                <ImageIcon size={12} /> Asset Visualization
+             </label>
+             
+             <div className="relative group">
+               {previewUrl ? (
+                 <div className="relative rounded-[2rem] overflow-hidden border border-slate-200 h-64 bg-slate-50">
+                   <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
+                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                     <button 
+                        type="button"
+                        onClick={handleRemovePreview}
+                        className="p-3 bg-white rounded-full text-rose-500 shadow-xl hover:scale-110 transition-transform"
+                     >
+                        <X size={20} />
+                     </button>
+                   </div>
+                 </div>
+               ) : (
+                 <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group">
+                    <Upload size={32} className="text-slate-300 group-hover:text-indigo-400 mb-4" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-600">Sync Graphical Reference</span>
+                    <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
+                 </label>
+               )}
+             </div>
+          </div>
+
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
               Resource Name <span className="text-rose-500">*</span>
@@ -164,156 +224,63 @@ const ResourceForm = () => {
               value={form.name}
               onChange={handleChange}
               required
-              placeholder="e.g. Grand Auditorium"
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all shadow-inner"
+              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all"
             />
           </div>
 
-          {/* Type + Status row */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Type <span className="text-rose-500">*</span>
-              </label>
-              <select
-                name="type"
-                value={form.type}
-                onChange={handleChange}
-                required
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all appearance-none cursor-pointer"
-              >
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type *</label>
+              <select name="type" value={form.type} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
                 <option value="">Select type</option>
                 {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Status
-              </label>
-              <select
-                name="status"
-                value={form.status}
-                onChange={handleChange}
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all appearance-none cursor-pointer"
-              >
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+              <select name="status" value={form.status} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
                 {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Category + Location row */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Category <span className="text-rose-500">*</span>
-              </label>
-              <select
-                name="category"
-                value={form.category}
-                onChange={handleChange}
-                required
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="">Select category</option>
-                {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category *</label>
+               <select name="category" value={form.category} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
+                 <option value="">Select category</option>
+                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+               </select>
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Location <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="text"
-                name="location"
-                value={form.location}
-                onChange={handleChange}
-                required
-                placeholder="e.g. Science Block, Room 101"
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all shadow-inner"
-              />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location *</label>
+              <input type="text" name="location" value={form.location} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all" />
             </div>
           </div>
 
-          {/* Capacity + Manager row */}
           <div className="grid grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Capacity Threshold
-              </label>
-              <input
-                type="number"
-                name="capacity"
-                value={form.capacity}
-                onChange={handleChange}
-                min="1"
-                placeholder="1"
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all shadow-inner"
-              />
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacity</label>
+              <input type="number" name="capacity" value={form.capacity} onChange={handleChange} min="1" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all" />
             </div>
             <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-                Custodian / Manager
-              </label>
-              <select
-                name="managerId"
-                value={form.managerId || ''}
-                onChange={handleChange}
-                className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all appearance-none cursor-pointer"
-              >
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custodian</label>
+              <select name="managerId" value={form.managerId || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
                 <option value="">No manager assigned</option>
                 {managers.map(m => <option key={m.id} value={m.id}>{m.username || m.name}</option>)}
               </select>
             </div>
           </div>
 
-          {/* Description */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-              Operational Briefing / Description
-            </label>
-            <textarea
-              name="description"
-              value={form.description}
-              onChange={handleChange}
-              rows={4}
-              placeholder="Declare asset specifications..."
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all resize-none shadow-inner"
-            />
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
+            <textarea name="description" value={form.description} onChange={handleChange} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all resize-none shadow-inner" />
           </div>
 
-          {/* Image URL */}
-          <div className="space-y-4">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-              <Upload size={12} /> Visual Reference URL
-            </label>
-            <input
-              type="url"
-              name="imageUrl"
-              value={form.imageUrl}
-              onChange={handleChange}
-              placeholder="https://images.unsplash.com/..."
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 focus:ring-4 focus:ring-indigo-500/5 outline-none transition-all shadow-inner"
-            />
-            {form.imageUrl && (
-              <img src={form.imageUrl} alt="Asset Preview" className="h-48 w-full object-cover rounded-[2rem] border border-slate-200 shadow-xl" />
-            )}
-          </div>
-
-          {/* Submit */}
           <div className="flex items-center justify-end gap-4 pt-8 border-t border-slate-50">
-            <button
-              type="button"
-              onClick={() => navigate('/admin/resources')}
-              className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={saving}
-              className="inline-flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10 disabled:opacity-50 active:scale-95 group"
-            >
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} className="group-hover:scale-110 transition-transform" />}
+            <button type="button" onClick={() => navigate('/admin/resources')} className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
+            <button type="submit" disabled={saving} className="inline-flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl disabled:opacity-50 active:scale-95 group">
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
               {saving ? 'Processing...' : isEdit ? 'Update Registry' : 'Commit to Registry'}
             </button>
           </div>
