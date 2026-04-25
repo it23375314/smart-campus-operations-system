@@ -100,18 +100,29 @@ const Navbar = () => {
   const getRoleItems = () => {
     if (!user) return [];
     switch (user.role) {
+      case 'ADMIN':
+        return [
+          { path: '/admin', label: 'Admin Panel', icon: <LayoutDashboard size={18} /> },
+          { path: '/ticket-list', label: 'Incidents', icon: <AlertCircle size={18} /> },
+        ];
+      case 'MANAGER':
+        return [
+          { path: '/admin', label: 'Manager Panel', icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+        ];
       case 'TECHNICIAN':
         return [
-          { path: '/technician', label: 'My Dashboard', icon: <LayoutDashboard size={18} /> },
-          { path: '/technician/tickets', label: 'My Tickets', icon: <ClipboardList size={18} /> },
+          { path: '/technician', label: 'Tech Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/technician/tickets', label: 'My Work', icon: <ClipboardList size={18} /> },
         ];
       case 'USER':
-      default:
         return [
-          { path: '/bookings', label: 'Book Resource', icon: <PlusCircle size={18} /> },
+          { path: '/bookings', label: 'Book', icon: <PlusCircle size={18} /> },
           { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} /> },
           { path: '/my-incidents', label: 'My Incidents', icon: <AlertCircle size={18} /> },
         ];
+      default:
+        return [];
     }
   };
 
@@ -142,46 +153,46 @@ const Navbar = () => {
   const managementItems = getManagementItems();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
-      <div className="max-w-[1440px] mx-auto px-6 h-24 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/90 backdrop-blur-2xl border-b border-white/40 shadow-sm py-2">
+      <div className="max-w-[1440px] mx-auto px-6 h-18 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-4 group">
+        <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all shadow-2xl bg-indigo-600 shadow-indigo-100"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all shadow-xl ${user?.role === 'ADMIN' ? 'bg-rose-600' : user?.role === 'MANAGER' ? 'bg-amber-600' : 'bg-indigo-600'}`}
           >
-            <ShieldHalf size={26} />
+            <ShieldHalf size={22} />
           </motion.div>
           <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tight leading-none text-slate-900 group-hover:text-indigo-600 transition-colors">
+            <span className="text-xl font-black tracking-tight leading-none text-slate-900 group-hover:text-indigo-600 transition-colors">
               SmartCampus
             </span>
-            <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-500/80">
-              Governance Portal
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+              Operations Center
             </span>
           </div>
         </Link>
 
         {/* Main Nav */}
-        <div className="hidden lg:flex items-center gap-1 p-1 rounded-[1.25rem] bg-slate-100 border border-slate-200/50">
+        <div className="hidden lg:flex items-center gap-1.5 p-1.5 rounded-[1.25rem] bg-slate-100/80 border border-slate-200/40">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
               end
               className={({ isActive }) => `
-                relative flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-all text-[13px] group
+                relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-black transition-all text-[12px] group
                 ${
                   isActive
-                    ? "bg-white text-indigo-700 shadow-md border border-indigo-100/50"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white/40"
+                    ? "bg-white text-indigo-700 shadow-sm border border-indigo-100/50"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white/40 uppercase tracking-tighter"
                 }
               `}
             >
               {({ isActive }) => (
                 <>
                   <span className={`${isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'} transition-colors`}>
-                    {item.icon}
+                    {React.cloneElement(item.icon, { size: 16 })}
                   </span>
                   {item.label}
                 </>
@@ -190,15 +201,15 @@ const Navbar = () => {
           ))}
 
           {managementItems.length > 0 && (
-            <div className="h-6 w-px bg-slate-200 mx-2" />
+            <div className="h-6 w-px bg-slate-200/60 mx-1.5" />
           )}
 
           {managementItems.length > 0 && (
              <div className="relative group/mgmt">
-                <button className="flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold text-[13px] text-slate-500 hover:text-indigo-700 hover:bg-white/40 transition-all">
-                  <Command size={18} className="text-indigo-500" />
+                <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[12px] text-slate-500 hover:text-indigo-700 hover:bg-white/40 transition-all uppercase tracking-tighter">
+                  <Command size={16} className="text-indigo-500" />
                   Management
-                  <ChevronDown size={14} className="group-hover/mgmt:rotate-180 transition-transform" />
+                  <ChevronDown size={12} className="group-hover/mgmt:rotate-180 transition-transform ml-1" />
                 </button>
                 
                 <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl py-3 opacity-0 invisible translate-y-2 group-hover/mgmt:opacity-100 group-hover/mgmt:visible group-hover/mgmt:translate-y-0 transition-all z-[200]">
@@ -240,16 +251,16 @@ const Navbar = () => {
                {/* User Info Card / Dropdown Trigger */}
                <button 
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                  className="flex items-center gap-3 p-1.5 pr-3 rounded-2xl border bg-white border-slate-200 hover:border-indigo-300 shadow-sm transition-all focus:outline-none group"
+                  className="flex items-center gap-2.5 p-1 pr-3 rounded-xl border bg-white border-slate-200 hover:border-indigo-300 transition-all focus:outline-none group shadow-sm hover:shadow-md"
                >
-                  <div className={`p-2.5 rounded-xl text-white shadow-md transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-600' : 'bg-indigo-600'}`}>
-                    <UserCircle size={20} />
+                  <div className={`p-2 rounded-lg text-white shadow-sm transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-600' : 'bg-indigo-600'}`}>
+                    <UserCircle size={18} />
                   </div>
                   <div className="hidden lg:block text-left">
-                    <p className="text-[13px] font-black text-slate-900 leading-tight">{user.name || 'User'}</p>
-                    <p className="text-[9px] font-bold text-slate-500 tracking-widest uppercase">{user.role}</p>
+                    <p className="text-[12px] font-black text-slate-800 leading-none">{user.name || 'User'}</p>
+                    <p className="text-[8px] font-black text-slate-400 tracking-wider uppercase mt-0.5">{user.role}</p>
                   </div>
-                  <ChevronDown size={14} className={`text-slate-400 ml-1 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+                  <ChevronDown size={12} className={`text-slate-300 ml-0.5 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                </button>
 
                {/* Dropdown Menu */}
