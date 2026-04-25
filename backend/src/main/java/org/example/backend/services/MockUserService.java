@@ -4,6 +4,7 @@ import org.example.backend.dtos.UserResponse;
 import org.example.backend.models.Role;
 import org.example.backend.models.User;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -14,9 +15,13 @@ import java.util.stream.Collectors;
 @Profile("mock")
 public class MockUserService implements UserService {
 
-    private final List<User> mockUsers = new ArrayList<>();
+    private static final String DEMO_PASSWORD = "password123";
 
-    public MockUserService() {
+    private final List<User> mockUsers = new ArrayList<>();
+    private final PasswordEncoder passwordEncoder;
+
+    public MockUserService(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
         mockUsers.add(createMockUser("Admin-1", "Admin User", "admin@campus.edu", Role.ADMIN));
         mockUsers.add(createMockUser("Admin-2", "Sarah Smith", "sarah@campus.edu", Role.ADMIN));
         mockUsers.add(createMockUser("Admin-3", "John Doe", "john@campus.edu", Role.ADMIN));
@@ -30,6 +35,7 @@ public class MockUserService implements UserService {
         u.setId(id);
         u.setName(name);
         u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(DEMO_PASSWORD));
         u.setRole(role);
         u.setActive(true);
         return u;

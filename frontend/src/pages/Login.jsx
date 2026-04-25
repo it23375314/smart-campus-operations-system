@@ -21,6 +21,14 @@ const Login = () => {
             const res = await loginUser(formData);
             const { token, ...userData } = res.data;
             login(userData, token);
+
+            // Keep a stable identity key so browser-local ticket caches stay user-specific.
+            const keySource = String(userData.id || userData.email || userData.name || '').trim().toLowerCase();
+            const currentUserKey = keySource ? `u:${keySource}` : '';
+            if (currentUserKey) localStorage.setItem('scos.currentUserKey', currentUserKey);
+            if (userData.email) localStorage.setItem('scos.email', userData.email);
+            if (userData.name) localStorage.setItem('scos.reportedBy', userData.name);
+
             toast.success(`Welcome back, ${userData.name}!`);
             navigate('/');
         } catch (err) {

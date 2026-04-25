@@ -23,7 +23,10 @@ import {
   ChevronDown,
   ShieldHalf,
   Command,
-  Settings2
+  Settings2,
+  AlertCircle,
+  Wrench,
+  ClipboardList
 } from "lucide-react";
 import {
   getUnreadCount
@@ -96,13 +99,20 @@ const Navbar = () => {
   // Role-Specific logic
   const getRoleItems = () => {
     if (!user) return [];
-    if (user.role === 'USER') {
-      return [
-        { path: "/bookings", label: "Book Resource", icon: <PlusCircle size={18} /> },
-        { path: "/my-bookings", label: "My Bookings", icon: <User size={18} /> },
-      ];
+    switch (user.role) {
+      case 'TECHNICIAN':
+        return [
+          { path: '/technician', label: 'My Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/technician/tickets', label: 'My Tickets', icon: <ClipboardList size={18} /> },
+        ];
+      case 'USER':
+      default:
+        return [
+          { path: '/bookings', label: 'Book Resource', icon: <PlusCircle size={18} /> },
+          { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} /> },
+          { path: '/my-incidents', label: 'My Incidents', icon: <AlertCircle size={18} /> },
+        ];
     }
-    return []; // Admin/Manager items moved to secondary dropdown
   };
 
   const getManagementItems = () => {
@@ -114,6 +124,8 @@ const Navbar = () => {
           { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
           { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+          { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
+          { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
         ];
       case "MANAGER":
         return [
@@ -156,6 +168,7 @@ const Navbar = () => {
             <NavLink
               key={item.path}
               to={item.path}
+              end
               className={({ isActive }) => `
                 relative flex items-center gap-2.5 px-6 py-2.5 rounded-xl font-bold transition-all text-[13px] group
                 ${
@@ -229,7 +242,7 @@ const Navbar = () => {
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="flex items-center gap-3 p-1.5 pr-3 rounded-2xl border bg-white border-slate-200 hover:border-indigo-300 shadow-sm transition-all focus:outline-none group"
                >
-                  <div className={`p-2.5 rounded-xl text-white shadow-md transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : 'bg-indigo-600'}`}>
+                  <div className={`p-2.5 rounded-xl text-white shadow-md transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-600' : 'bg-indigo-600'}`}>
                     <UserCircle size={20} />
                   </div>
                   <div className="hidden lg:block text-left">

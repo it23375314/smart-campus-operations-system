@@ -33,6 +33,9 @@ public class MongoAuthService implements AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 Role.USER
         );
+        
+        // 🔥 FIX: Explicitly activate the user so it saves properly and allows login
+        user.setActive(true);
 
         User savedUser = userRepository.save(user);
         String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole().name());
@@ -82,6 +85,9 @@ public class MongoAuthService implements AuthService {
                 passwordEncoder.encode(request.getPassword()),
                 Role.valueOf(role.toUpperCase())
         );
+        
+        // 🔥 FIX: Explicitly activate the user here as well
+        user.setActive(true);
 
         User savedUser = userRepository.save(user);
         String token = jwtUtil.generateToken(savedUser.getEmail(), savedUser.getRole().name());
