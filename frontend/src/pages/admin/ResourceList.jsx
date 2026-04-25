@@ -18,6 +18,7 @@ import {
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import toast from 'react-hot-toast';
+import { motion } from 'framer-motion';
 
 const TYPES = ['All', 'room', 'lab', 'equipment'];
 
