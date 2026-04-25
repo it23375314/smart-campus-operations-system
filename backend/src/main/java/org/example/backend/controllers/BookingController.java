@@ -45,7 +45,8 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> createBooking(
             @Valid @RequestBody BookingRequestDTO request,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return new ResponseEntity<>(bookingService.createBooking(request, currentUserId, currentUserRole), HttpStatus.CREATED);
     }
 
@@ -53,10 +54,8 @@ public class BookingController {
     @GetMapping("/my")
     public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
-        if (currentUserRole != Role.USER) {
-            throw new ForbiddenException("This endpoint is for students/users only.");
-        }
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.getAllBookings(currentUserId, null, null, null, null, currentUserId, currentUserRole));
     }
 
@@ -69,7 +68,8 @@ public class BookingController {
             @RequestParam(required = false) String date,
             @RequestParam(required = false) String search,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole == Role.USER) {
             throw new ForbiddenException("Users cannot access the global bookings list. Use /my instead.");
         }
@@ -80,7 +80,8 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> getBookingById(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserId, currentUserRole));
     }
 
@@ -90,7 +91,8 @@ public class BookingController {
             @PathVariable String id, 
             @Valid @RequestBody BookingRequestDTO request,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.updateBooking(id, request, currentUserId, currentUserRole));
     }
 
@@ -99,7 +101,8 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> adminCancelBooking(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole != Role.ADMIN) {
             throw new ForbiddenException("Only Admins can override and cancel bookings.");
         }
@@ -111,7 +114,8 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> approveBooking(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.approveBooking(id, currentUserId, currentUserRole));
     }
 
@@ -121,7 +125,8 @@ public class BookingController {
             @PathVariable String id,
             @Valid @RequestBody RejectRequestDTO rejectRequest,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.rejectBooking(id, rejectRequest.getReason(), currentUserId, currentUserRole));
     }
 
@@ -130,14 +135,16 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> cancelBooking(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         return ResponseEntity.ok(bookingService.cancelBooking(id, currentUserId, currentUserRole));
     }
 
     // MANAGER: Aggregated Analytics
     @GetMapping("/analytics")
     public ResponseEntity<Map<String, Object>> getAnalytics(
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole != Role.MANAGER && currentUserRole != Role.ADMIN) {
             throw new ForbiddenException("Only Managers and Admins can view analytics.");
         }
@@ -164,7 +171,8 @@ public class BookingController {
     // Analytics: Summary
     @GetMapping("/analytics/summary")
     public ResponseEntity<AnalyticsSummaryDTO> getSummaryAnalytics(
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
             throw new ForbiddenException("Unauthorized to view analytics.");
         }
@@ -174,7 +182,8 @@ public class BookingController {
     // Analytics: Popular Resources
     @GetMapping("/analytics/popular-resources")
     public ResponseEntity<List<ResourceUsageDTO>> getPopularResources(
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
             throw new ForbiddenException("Unauthorized to view analytics.");
         }
@@ -184,7 +193,8 @@ public class BookingController {
     // Analytics: Peak Hours
     @GetMapping("/analytics/peak-hours")
     public ResponseEntity<List<PeakHourDTO>> getPeakHours(
-            @RequestHeader("X-User-Role") Role currentUserRole) {
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
             throw new ForbiddenException("Unauthorized to view analytics.");
         }
@@ -196,8 +206,8 @@ public class BookingController {
     public ResponseEntity<InputStreamResource> downloadBookingPdf(
             @PathVariable String id,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
-        
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         BookingResponseDTO booking = bookingService.getBookingById(id, currentUserId, currentUserRole);
         String resourceName = resourceService.getResourceById(booking.getResourceId())
                 .map(r -> r.getName())
@@ -224,8 +234,8 @@ public class BookingController {
             @RequestParam(required = false) String date,
             @RequestParam(required = false) String search,
             @RequestHeader("X-User-Id") String currentUserId,
-            @RequestHeader("X-User-Role") Role currentUserRole) {
-        
+            @RequestHeader("X-User-Role") String currentUserRoleStr) {
+        Role currentUserRole = Role.valueOf(currentUserRoleStr.toUpperCase());
         if (currentUserRole == Role.USER) {
             throw new ForbiddenException("Unauthorized: Localized users cannot export global administrative records.");
         }

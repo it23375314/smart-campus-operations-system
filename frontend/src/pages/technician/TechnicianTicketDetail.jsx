@@ -112,14 +112,28 @@ const TechnicianTicketDetail = () => {
   const [replyFocused, setReplyFocused]   = useState(false);
   const [editingIndex, setEditingIndex]   = useState(null);
   const [editingText, setEditingText]     = useState('');
+  const [confirmDeleteIdx, setConfirmDeleteIdx] = useState(null);
 
   const user     = JSON.parse(localStorage.getItem('user') || '{}');
   const techName = user?.username || user?.name || 'Technician';
   const techIdentity = String(user?.username || user?.name || user?.email || user?.id || '').trim().toLowerCase();
+  const currentUserRole = localStorage.getItem('scos.role') || '';
+  const isCurrentUserAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'Admin';
 
   const isOwnTechnicianRemark = (remark) => {
     const author = getRemarkAuthorMeta(remark);
     return author.role === 'TECHNICIAN' && Boolean(techIdentity) && author.identity === techIdentity;
+  };
+
+  const canDeleteComment = (remark) => {
+    if (isCurrentUserAdmin) return true; // Admins can delete any comment
+    if (isOwnTechnicianRemark(remark)) return true; // Technicians can delete their own
+    return false;
+  };
+
+  const canEditComment = (remark) => {
+    if (isOwnTechnicianRemark(remark)) return true; // Technicians can edit their own
+    return false;
   };
 
   const isAssignedToCurrentTech = (ticket) => {
@@ -220,23 +234,20 @@ const TechnicianTicketDetail = () => {
 
   const handleDeleteComment = async (idx) => {
     const originalRemark = incident.remarksHistory[idx];
-    
-    // Strict ownership check
-    const isOwn = isOwnTechnicianRemark(originalRemark);
-    if (!isOwn) {
-      alert("Permission denied: You can only delete your own comments.");
-      return;
-    }
+    if (!canDeleteComment(originalRemark)) return;
+    setConfirmDeleteIdx(idx);
+  };
 
-    if (!window.confirm('Delete this comment?')) return;
+  const confirmTechDelete = async () => {
+    const idx = confirmDeleteIdx;
+    setConfirmDeleteIdx(null);
     const updatedRemarks = incident.remarksHistory.filter((_, i) => i !== idx);
-
     setSubmitting(true);
     try {
       await API.put(`/incidents/${id}`, { ...incident, remarksHistory: updatedRemarks });
       setIncident({ ...incident, remarksHistory: updatedRemarks });
     } catch (err) {
-      alert('Failed to delete comment');
+      /* silent */
     } finally {
       setSubmitting(false);
     }
@@ -485,22 +496,28 @@ const TechnicianTicketDetail = () => {
                                   </div>
                                 </div>
                               </div>
-                              {isOwn && editingIndex !== idx && (
+                              {(canEditComment(remark) || canDeleteComment(remark)) && editingIndex !== idx && (
                                 <div className="flex items-center gap-1 ml-4">
-                                  <button
-                                    type="button"
-                                    onClick={() => { setEditingIndex(idx); setEditingText(message); }}
-                                    className="p-1 text-slate-400 hover:text-indigo-600 transition-colors"
-                                  >
-                                    <Pencil size={12} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => handleDeleteComment(idx)}
-                                    className="p-1 text-slate-400 hover:text-rose-600 transition-colors"
-                                  >
-                                    <Trash2 size={12} />
-                                  </button>
+                                  {canEditComment(remark) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => { setEditingIndex(idx); setEditingText(message); }}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
+                                      title="Edit comment"
+                                    >
+                                      <Pencil size={12} />
+                                    </button>
+                                  )}
+                                  {canDeleteComment(remark) && (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteComment(idx)}
+                                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                                      title={isCurrentUserAdmin && !isOwnTechnicianRemark(remark) ? "Delete (Moderation)" : "Delete"}
+                                    >
+                                      <Trash2 size={12} />
+                                    </button>
+                                  )}
                                 </div>
                               )}
                             </div>
@@ -727,6 +744,55 @@ const TechnicianTicketDetail = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Delete Confirmation Modal ─────────────────────────────── */}
+      <AnimatePresence>
+        {confirmDeleteIdx !== null && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setConfirmDeleteIdx(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 max-w-sm w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+                  <Trash2 size={22} className="text-rose-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-900">Delete Comment?</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {isCurrentUserAdmin && confirmDeleteIdx !== null && !isOwnTechnicianRemark(incident.remarksHistory?.[confirmDeleteIdx] || '')
+                      ? 'Admin moderation — this action cannot be undone.'
+                      : 'This action cannot be undone.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDeleteIdx(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmTechDelete}
+                  disabled={submitting}
+                  className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
+                >
+                  {submitting ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Image Lightbox ───────────────────────────────── */}
       <AnimatePresence>
