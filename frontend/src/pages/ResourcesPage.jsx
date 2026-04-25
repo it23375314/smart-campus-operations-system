@@ -323,16 +323,13 @@ const ResourcesPage = () => {
                           {resource.description || "High-specification academic facility designed for elite performance and research."}
                         </p>
                         
-                        <div className="mt-auto flex items-center justify-between">
+                        <div className="mt-auto text-center">
                            <button 
                              onClick={() => setSelectedResource(resource)}
-                             className="inline-flex items-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
+                             className="w-full inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
                            >
                               View Brief <ChevronRight size={12} />
                            </button>
-                           <div className="text-[10px] font-black text-slate-200 group-hover:text-indigo-600 transition-colors uppercase tracking-widest">
-                             {resource.id}
-                           </div>
                         </div>
                       </div>
                     </motion.div>
