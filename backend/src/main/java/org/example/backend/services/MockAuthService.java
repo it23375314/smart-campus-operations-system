@@ -30,7 +30,16 @@ public class MockAuthService implements AuthService {
         user.setName(request.getName());
         user.setEmail(request.getEmail());
         user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setRole(Role.USER);
+        
+        Role role = Role.USER;
+        if (request.getRole() != null) {
+            try {
+                role = Role.valueOf(request.getRole().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Fallback
+            }
+        }
+        user.setRole(role);
         user.setActive(true);
 
         User savedUser = userService.save(user);

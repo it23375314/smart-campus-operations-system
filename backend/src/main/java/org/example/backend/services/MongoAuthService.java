@@ -27,11 +27,20 @@ public class MongoAuthService implements AuthService {
             throw new RuntimeException("Email already registered");
         }
 
+        Role role = Role.USER;
+        if (request.getRole() != null) {
+            try {
+                role = Role.valueOf(request.getRole().toUpperCase());
+            } catch (IllegalArgumentException e) {
+                // Fallback to USER if invalid role provided
+            }
+        }
+
         User user = new User(
                 request.getName(),
                 request.getEmail(),
                 passwordEncoder.encode(request.getPassword()),
-                Role.USER
+                role
         );
         
         // 🔥 FIX: Explicitly activate the user so it saves properly and allows login

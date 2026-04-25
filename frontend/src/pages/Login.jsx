@@ -112,22 +112,28 @@ const Login = () => {
                 {/* Quick Dev Login */}
                 <div className="mt-8 pt-6 border-t border-dashed border-gray-200">
                     <p className="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center mb-4">Development Access (Bypass Mode)</p>
-                    <div className="grid grid-cols-3 gap-3">
+                    <div className="grid grid-cols-2 gap-3">
                         <button 
                             onClick={() => login({ id: 'DEV-MANAGER', name: 'Sara Manager', email: 'sara.w@campus.edu', role: 'MANAGER' }, 'mock-token-manager')}
-                            className="text-[10px] font-bold py-2 px-1 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-tighter"
+                            className="text-[10px] font-bold py-2.5 px-2 bg-indigo-50 text-indigo-600 rounded-lg border border-indigo-100 hover:bg-indigo-600 hover:text-white transition-all uppercase tracking-widest shadow-sm"
                         >
                             Log as Manager
                         </button>
                         <button 
                             onClick={() => login({ id: 'DEV-ADMIN', name: 'Admin User', email: 'admin@campus.edu', role: 'ADMIN' }, 'mock-token-admin')}
-                            className="text-[10px] font-bold py-2 px-1 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 hover:bg-slate-600 hover:text-white transition-all uppercase tracking-tighter"
+                            className="text-[10px] font-bold py-2.5 px-2 bg-slate-50 text-slate-600 rounded-lg border border-slate-100 hover:bg-slate-600 hover:text-white transition-all uppercase tracking-widest shadow-sm"
                         >
                             Log as Admin
                         </button>
                         <button 
+                            onClick={() => login({ id: 'DEV-TECHNICIAN', name: 'Tech Master', email: 'tech@campus.edu', role: 'TECHNICIAN' }, 'mock-token-tech')}
+                            className="text-[10px] font-bold py-2.5 px-2 bg-teal-50 text-teal-600 rounded-lg border border-teal-100 hover:bg-teal-600 hover:text-white transition-all uppercase tracking-widest shadow-sm"
+                        >
+                            Log as Technician
+                        </button>
+                        <button 
                             onClick={() => login({ id: 'DEV-STUDENT', name: 'John Student', email: 'student@campus.edu', role: 'USER' }, 'mock-token-user')}
-                            className="text-[10px] font-bold py-2 px-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-tighter"
+                            className="text-[10px] font-bold py-2.5 px-2 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100 hover:bg-emerald-600 hover:text-white transition-all uppercase tracking-widest shadow-sm"
                         >
                             Log as Student
                         </button>
