@@ -89,8 +89,19 @@ const ResourcesPage = () => {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pt-40 pb-40 relative overflow-hidden bg-blueprint">
-      <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-[1px] pointer-events-none" />
+    <div className="bg-slate-50 min-h-screen pt-40 pb-32 px-6 relative overflow-hidden">
+      {/* Architectural Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-[0.03] pointer-events-none grayscale"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/blueprint.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
+      
+      <div className="absolute inset-0 bg-slate-50/60 backdrop-blur-[1px] pointer-events-none" />
       <div className="grain-overlay" />
       
       <div className="max-w-7xl mx-auto px-6 relative z-10">

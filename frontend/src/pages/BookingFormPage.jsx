@@ -164,9 +164,19 @@ const BookingFormPage = () => {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pt-40 pb-20 relative overflow-hidden bg-blueprint">
-      <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-[1px] pointer-events-none" />
-      <div className="grain-overlay" />
+    <div className="bg-slate-50 min-h-screen pt-40 pb-20 relative overflow-hidden">
+      {/* Architectural Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-[0.05] pointer-events-none grayscale"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/architecture.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
+      
+      <div className="absolute inset-0 bg-slate-50/60 backdrop-blur-[1px] pointer-events-none" />
 
       <div className="max-w-4xl mx-auto px-6 relative z-10">
         <Link to="/resources" className="inline-flex items-center gap-2 text-indigo-600 font-black tracking-widest uppercase text-[10px] mb-8 hover:gap-3 transition-all">
