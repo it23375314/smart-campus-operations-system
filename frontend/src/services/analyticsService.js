@@ -1,36 +1,13 @@
-import axios from 'axios';
-
-const API_URL = 'http://localhost:8085/bookings/analytics';
-
-// Create axios instance with interceptors for simulation
-const api = axios.create({
-  baseURL: API_URL
-});
-
-api.interceptors.request.use((config) => {
-  const user = JSON.parse(localStorage.getItem('user'));
-  if (user) {
-    config.headers['X-User-Id'] = user.id;
-    config.headers['X-User-Role'] = user.role;
-  }
-  return config;
-}, (error) => {
-  return Promise.reject(error);
-});
+import API from './api';
 
 const analyticsService = {
-  getSummary: async () => {
-    const response = await api.get('/summary');
+  getStats: async () => {
+    const response = await API.get('/bookings/stats');
     return response.data;
   },
 
-  getPopularResources: async () => {
-    const response = await api.get('/popular-resources');
-    return response.data;
-  },
-
-  getPeakHours: async () => {
-    const response = await api.get('/peak-hours');
+  getAnalytics: async () => {
+    const response = await API.get('/bookings/analytics');
     return response.data;
   }
 };

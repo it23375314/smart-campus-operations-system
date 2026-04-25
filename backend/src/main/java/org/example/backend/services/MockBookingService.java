@@ -11,7 +11,6 @@ import java.time.LocalDateTime;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 import org.example.backend.dtos.AvailabilitySlotDTO;
@@ -48,16 +47,27 @@ public class MockBookingService implements BookingService {
 
     @Override
     public BookingResponseDTO createBooking(BookingRequestDTO request, String currentUserId, Role currentUserRole) {
+        if (request.getStartTime().isAfter(request.getEndTime()) || request.getStartTime().isEqual(request.getEndTime())) {
+            throw new IllegalArgumentException("Start time must be strictly before end time");
+        }
+
+        if (!isTimeSlotAvailable(request.getResourceId(), request.getStartTime().toLocalDate(), request.getStartTime(), request.getEndTime())) {
+            throw new org.example.backend.exceptions.ConflictException("Time slot is already booked");
+        }
+        
         BookingResponseDTO booking = createMockBooking("BK-" + (mockBookings.size() + 9001), currentUserId, request.getResourceId(), request.getStartTime(), request.getEndTime(), request.getPurpose(), BookingStatus.PENDING);
         mockBookings.add(booking);
         return booking;
     }
 
     @Override
-    public List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String currentUserId, Role currentUserRole) {
+    public List<BookingResponseDTO> getAllBookings(String userId, String resourceId, String status, String date, String search, String currentUserId, Role currentUserRole) {
         return mockBookings.stream()
-                .filter(b -> (userId == null || b.getUserId().equals(userId)))
-                .filter(b -> (resourceId == null || b.getResourceId().equals(resourceId)))
+                .filter(b -> (userId == null || b.getUserId().equalsIgnoreCase(userId)))
+                .filter(b -> (resourceId == null || b.getResourceId().equalsIgnoreCase(resourceId)))
+                .filter(b -> (status == null || b.getStatus().name().equalsIgnoreCase(status)))
+                .filter(b -> (date == null || b.getStartTime().toLocalDate().toString().equals(date)))
+                .filter(b -> (search == null || b.getPurpose().toLowerCase().contains(search.toLowerCase()) || b.getUserId().toLowerCase().contains(search.toLowerCase())))
                 .collect(Collectors.toList());
     }
 
@@ -84,25 +94,64 @@ public class MockBookingService implements BookingService {
 
     @Override
     public BookingResponseDTO approveBooking(String id, String currentUserId, Role currentUserRole) {
+        if (currentUserRole != Role.MANAGER && currentUserRole != Role.ADMIN) {
+            throw new org.example.backend.exceptions.ForbiddenException("Only managers or admins are authorized to approve bookings");
+        }
+        
         BookingResponseDTO b = getBookingById(id, currentUserId, currentUserRole);
-        if (b != null) b.setStatus(BookingStatus.APPROVED);
+        if (b == null) {
+            throw new org.example.backend.exceptions.ResourceNotFoundException("Booking not found");
+        }
+        
+        if (b.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalStateException("Only synchronization requests in PENDING state can be processed. Current state: " + b.getStatus());
+        }
+        
+        if (!isTimeSlotAvailable(b.getResourceId(), b.getStartTime().toLocalDate(), b.getStartTime(), b.getEndTime())) {
+            throw new org.example.backend.exceptions.ConflictException("Time slot is already booked");
+        }
+        
+        b.setStatus(BookingStatus.APPROVED);
         return b;
     }
 
     @Override
     public BookingResponseDTO rejectBooking(String id, String reason, String currentUserId, Role currentUserRole) {
-        BookingResponseDTO b = getBookingById(id, currentUserId, currentUserRole);
-        if (b != null) {
-            b.setStatus(BookingStatus.REJECTED);
-            b.setRejectionReason(reason);
+        if (currentUserRole != Role.MANAGER && currentUserRole != Role.ADMIN) {
+            throw new org.example.backend.exceptions.ForbiddenException("Only managers or admins are authorized to reject bookings");
         }
+        
+        BookingResponseDTO b = getBookingById(id, currentUserId, currentUserRole);
+        if (b == null) {
+            throw new org.example.backend.exceptions.ResourceNotFoundException("Booking not found");
+        }
+        
+        if (b.getStatus() != BookingStatus.PENDING) {
+            throw new IllegalStateException("Only synchronization requests in PENDING state can be processed. Current state: " + b.getStatus());
+        }
+        
+        b.setStatus(BookingStatus.REJECTED);
+        b.setRejectionReason(reason);
         return b;
     }
 
     @Override
     public BookingResponseDTO cancelBooking(String id, String currentUserId, Role currentUserRole) {
         BookingResponseDTO b = getBookingById(id, currentUserId, currentUserRole);
-        if (b != null) b.setStatus(BookingStatus.CANCELLED);
+        if (b == null) {
+            throw new org.example.backend.exceptions.ResourceNotFoundException("Booking not found");
+        }
+
+        // Logic: ADMIN can cancel any. USER/MANAGER can only cancel their own.
+        if (currentUserRole != Role.ADMIN && !b.getUserId().equals(currentUserId)) {
+            throw new org.example.backend.exceptions.ForbiddenException("Unauthorized: You can only cancel your own bookings unless you have Administrative clearance.");
+        }
+
+        if (b.getStatus() == BookingStatus.CANCELLED) {
+            throw new IllegalStateException("Synchronization cycle is already in CANCELLED state.");
+        }
+
+        b.setStatus(BookingStatus.CANCELLED);
         return b;
     }
 
@@ -198,5 +247,25 @@ public class MockBookingService implements BookingService {
         stats.put("rejected", mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.REJECTED).count());
         stats.put("cancelled", mockBookings.stream().filter(b -> b.getStatus() == BookingStatus.CANCELLED).count());
         return stats;
+    }
+
+    @Override
+    public boolean isTimeSlotAvailable(String resourceId, LocalDate date, LocalDateTime startTime, LocalDateTime endTime) {
+        // Query database: Find bookings with same resource and filter for APPROVED
+        List<BookingResponseDTO> approvedForDate = mockBookings.stream()
+                .filter(b -> b.getResourceId().equals(resourceId))
+                .filter(b -> b.getStatus() == BookingStatus.APPROVED)
+                .filter(b -> b.getStartTime().toLocalDate().equals(date) || b.getEndTime().toLocalDate().equals(date))
+                .collect(Collectors.toList());
+
+        // Loop through results and check overlap condition
+        for (BookingResponseDTO existing : approvedForDate) {
+            // (startTime < existingEndTime) AND (endTime > existingStartTime)
+            if (startTime.isBefore(existing.getEndTime()) && endTime.isAfter(existing.getStartTime())) {
+                return false; // Conflict found
+            }
+        }
+        
+        return true;
     }
 }

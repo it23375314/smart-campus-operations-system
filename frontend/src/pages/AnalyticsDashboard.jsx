@@ -26,14 +26,13 @@ const AnalyticsDashboard = () => {
   useEffect(() => {
     const fetchAllData = async () => {
       try {
-        const [sum, pop, peak] = await Promise.all([
-          analyticsService.getSummary(),
-          analyticsService.getPopularResources(),
-          analyticsService.getPeakHours()
+        const [statsData, analyticsData] = await Promise.all([
+          analyticsService.getStats(),
+          analyticsService.getAnalytics()
         ]);
-        setSummary(sum);
-        setPopularResources(pop);
-        setPeakHours(peak);
+        setSummary(statsData);
+        setPopularResources(analyticsData.mostUsedResources || []);
+        setPeakHours(analyticsData.peakBookingHours || []);
       } catch (error) {
         console.error("Error fetching analytics data:", error);
       } finally {
@@ -92,10 +91,10 @@ const AnalyticsDashboard = () => {
         {/* Summary Metric Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-20">
           {[
-            { label: 'Total Volume', value: summary?.total, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
-            { label: 'Approval Yield', value: `${summary?.approvalRatio.toFixed(1)}%`, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
-            { label: 'Pending Queue', value: summary?.pending, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100' },
-            { label: 'Reject Rate', value: summary?.rejected, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-100' },
+            { label: 'Total Volume', value: summary?.totalBookings, icon: FileText, color: 'text-slate-600', bg: 'bg-slate-100' },
+            { label: 'Approved Records', value: summary?.approvedBookings, icon: CheckCircle2, color: 'text-emerald-600', bg: 'bg-emerald-100' },
+            { label: 'Pending Queue', value: summary?.pendingBookings, icon: Activity, color: 'text-amber-600', bg: 'bg-amber-100' },
+            { label: 'Rejected Entries', value: summary?.rejectedBookings, icon: XCircle, color: 'text-rose-600', bg: 'bg-rose-100' },
           ].map((card, i) => (
             <motion.div
               key={i}

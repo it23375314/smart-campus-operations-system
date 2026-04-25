@@ -84,7 +84,10 @@ public class MongoUserService implements UserService {
 
     @Override
     public List<User> getManagers() {
-        return userRepository.findByRole(Role.MANAGER);
+        return userRepository.findAll()
+                .stream()
+                .filter(user -> user.getRole() != null && user.getRole().name().equals("MANAGER"))
+                .collect(Collectors.toList());
     }
 
     @Override

@@ -13,34 +13,36 @@ import {
   AlertCircle,
   Loader2,
   Package,
-  Briefcase
+  MapPin,
+  ShieldCheck
 } from 'lucide-react';
-import axios from 'axios';
-
-const API_BASE = 'http://localhost:8085/api/resources';
+import API from '../../services/api';
+import toast from 'react-hot-toast';
 
 const StatusIcon = ({ status }) => {
   const config = {
-    AVAILABLE: { icon: <CheckCircle2 size={16} />, label: 'Available', cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
-    UNAVAILABLE: { icon: <XCircle size={16} />, label: 'Unavailable', cls: 'text-rose-500 bg-rose-50 border-rose-200' },
+    ACTIVE: { icon: <CheckCircle2 size={16} />, label: 'Active', cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
+    OUT_OF_SERVICE: { icon: <XCircle size={16} />, label: 'Decommissioned', cls: 'text-rose-500 bg-rose-50 border-rose-200' },
     MAINTENANCE: { icon: <AlertCircle size={16} />, label: 'Under Maintenance', cls: 'text-amber-600 bg-amber-50 border-amber-200' },
+    AVAILABLE: { icon: <CheckCircle2 size={16} />, label: 'Available', cls: 'text-emerald-600 bg-emerald-50 border-emerald-200' },
   };
-  const c = config[status] || config.UNAVAILABLE;
+  const c = config[status] || { icon: <AlertCircle size={16} />, label: status, cls: 'text-slate-500 bg-slate-50 border-slate-200' };
   return (
-    <span className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-sm font-semibold ${c.cls}`}>
+    <span className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border text-[10px] font-black uppercase tracking-widest ${c.cls}`}>
       {c.icon} {c.label}
     </span>
   );
 };
 
-const InfoRow = ({ icon, label, value }) => (
-  <div className="flex items-center gap-4 py-3 border-b border-slate-100 last:border-0">
-    <div className="w-8 h-8 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-500 shrink-0">
+const InfoCard = ({ icon, label, value, subtext }) => (
+  <div className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100 flex items-start gap-4 hover:bg-white hover:border-indigo-100 transition-all group">
+    <div className="w-12 h-12 rounded-2xl bg-white shadow-sm flex items-center justify-center text-indigo-500 group-hover:scale-110 transition-transform">
       {icon}
     </div>
     <div>
-      <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">{label}</p>
-      <p className="text-sm font-semibold text-slate-800 mt-0.5">{value || '—'}</p>
+      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+      <p className="text-sm font-bold text-slate-900">{value || '—'}</p>
+      {subtext && <p className="text-[10px] font-medium text-slate-400 mt-0.5">{subtext}</p>}
     </div>
   </div>
 );
@@ -55,7 +57,7 @@ const ResourceDetails = () => {
   useEffect(() => {
     const fetchResource = async () => {
       try {
-        const res = await axios.get(`${API_BASE}/${id}`);
+        const res = await API.get(`/resources/${id}`);
         setResource(res.data);
       } catch {
         setError('Resource not found or could not be loaded.');
@@ -67,128 +69,110 @@ const ResourceDetails = () => {
   }, [id]);
 
   const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this resource? This action cannot be undone.')) return;
+    if (!window.confirm('Institutional Confirmation: Irreversibly decommission this asset?')) return;
     try {
-      await axios.delete(`${API_BASE}/${id}`);
+      await API.delete(`/resources/${id}`);
+      toast.success("Asset decommissioned.");
       navigate('/admin/resources');
     } catch {
-      alert('Failed to delete resource.');
+      toast.error('Decommission protocol failure.');
     }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center py-32 text-slate-400">
-        <Loader2 size={24} className="animate-spin mr-3" />
-        <span className="text-lg font-medium">Loading resource...</span>
+      <div className="flex flex-col items-center justify-center py-40 text-slate-400">
+        <div className="w-12 h-12 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin mb-6" />
+        <span className="text-xs font-black uppercase tracking-[0.3em]">Synching Asset Briefing...</span>
       </div>
     );
   }
 
   if (error || !resource) {
     return (
-      <div className="max-w-lg mx-auto text-center py-32">
-        <Package size={40} className="text-slate-300 mx-auto mb-4" />
-        <p className="text-lg font-semibold text-slate-600 mb-2">Resource Not Found</p>
-        <p className="text-sm text-slate-400 mb-6">{error}</p>
+      <div className="max-w-lg mx-auto text-center py-40">
+        <Package size={64} className="text-slate-200 mx-auto mb-6" strokeWidth={1} />
+        <h3 className="text-2xl font-prestige text-slate-900 mb-2">Detailed Registry Void.</h3>
+        <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-10">{error}</p>
         <button
           onClick={() => navigate('/admin/resources')}
-          className="px-5 py-2.5 rounded-xl text-sm font-medium text-white"
-          style={{ background: 'linear-gradient(135deg, #4f46e5, #6d28d9)' }}
+          className="px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
         >
-          Back to Resources
+          Back to Resource Matrix
         </button>
       </div>
     );
   }
 
-  const availableDaysLabel = resource.availableDays?.length
-    ? resource.availableDays.map(d => d.slice(0, 3)).join(', ')
-    : 'Not specified';
-
-  const availableTimesLabel = resource.availableTimes
-    ? `${resource.availableTimes.start ?? ''} – ${resource.availableTimes.end ?? ''}`
-    : 'Not specified';
-
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-4xl mx-auto pb-20">
       <button
         onClick={() => navigate('/admin/resources')}
-        className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800 mb-6 transition-colors font-medium"
+        className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 hover:text-indigo-600 transition-all group"
       >
-        <ArrowLeft size={16} />
-        Back to Resources
+        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+        Back to Asset Matrix
       </button>
 
-      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-        {/* Hero image */}
-        <div className="relative h-52 bg-slate-100">
+      <div className="bg-white rounded-[3.5rem] border border-slate-200 shadow-2xl overflow-hidden glass-heavy">
+        {/* Banner with Identity */}
+        <div className="relative h-80 bg-slate-100">
           {resource.imageUrl ? (
             <img src={resource.imageUrl} alt={resource.name} className="w-full h-full object-cover" />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-slate-300">
-              <Package size={48} />
+            <div className="w-full h-full flex items-center justify-center text-slate-200">
+              <Package size={80} strokeWidth={1} />
             </div>
           )}
-          {/* Gradient overlay */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-          <div className="absolute bottom-4 left-6">
-            <p className="text-xs font-bold text-white/70 uppercase tracking-widest mb-1">{resource.category}</p>
-            <h2 className="text-2xl font-bold text-white">{resource.name}</h2>
-          </div>
-          <div className="absolute top-4 right-4">
-            <StatusIcon status={resource.status} />
+          <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
+          
+          <div className="absolute bottom-10 left-10 right-10">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <span className="text-[10px] font-black text-white px-3 py-1 bg-white/20 backdrop-blur-md rounded-md uppercase tracking-[0.2em]">{resource.type}</span>
+                  <span className="text-[10px] font-black text-white/60 uppercase tracking-[0.2em]">{resource.category}</span>
+                </div>
+                <h2 className="text-5xl font-prestige text-white leading-tight">{resource.name}.</h2>
+              </div>
+              <StatusIcon status={resource.status} />
+            </div>
           </div>
         </div>
 
-        {/* Details */}
-        <div className="p-6">
-          {resource.description && (
-            <p className="text-sm text-slate-500 mb-6 leading-relaxed">{resource.description}</p>
-          )}
-
-          <div className="mb-6">
-            <InfoRow icon={<Tag size={15} />} label="Category" value={resource.category} />
-            <InfoRow icon={<Users size={15} />} label="Capacity" value={`${resource.capacity} people`} />
-            <InfoRow icon={<Briefcase size={15} />} label="Assigned Manager" value={resource.managerName || 'No manager assigned'} />
-            <InfoRow icon={<Calendar size={15} />} label="Available Days" value={availableDaysLabel} />
-            <InfoRow icon={<Clock size={15} />} label="Available Hours" value={availableTimesLabel} />
+        {/* Intelligence Matrix */}
+        <div className="p-10">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+            <InfoCard icon={<MapPin size={20} />} label="Spatial Identity" value={resource.location} subtext="Campus Geographical Anchor" />
+            <InfoCard icon={<Users size={20} />} label="Operational Capacity" value={`${resource.capacity} Standard Units`} subtext="Institutional Safety Threshold" />
+            <InfoCard icon={<ShieldCheck size={20} />} label="Asset Custodian" value={resource.managerName} subtext="Assigned Stewardship" />
+            <InfoCard icon={<Clock size={20} />} label="Verification Status" value={resource.status === 'ACTIVE' ? 'Operational' : 'Restricted'} subtext="Current Lifecycle Node" />
           </div>
 
-          {/* Available days chips */}
-          {resource.availableDays?.length > 0 && (
-            <div className="mb-6">
-              <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Available Days</p>
-              <div className="flex flex-wrap gap-2">
-                {resource.availableDays.map(day => (
-                  <span
-                    key={day}
-                    className="px-3 py-1 text-xs font-semibold text-indigo-600 bg-indigo-50 rounded-full border border-indigo-100"
-                  >
-                    {day}
-                  </span>
-                ))}
-              </div>
+          <div className="space-y-10">
+            {/* Description */}
+            <div className="bg-slate-50/50 p-10 rounded-[2.5rem] border border-slate-100">
+              <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-6">Strategic Asset Briefing</h4>
+              <p className="text-base text-slate-600 font-medium leading-relaxed italic">
+                {resource.description || 'No formal operational briefing has been declared for this institutional asset.'}
+              </p>
             </div>
-          )}
 
-          {/* Actions */}
-          <div className="flex items-center gap-3 pt-4 border-t border-slate-100">
-            <Link
-              to={`/admin/resources/edit/${resource.id}`}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200"
-              style={{ background: 'linear-gradient(135deg, #4f46e5, #6d28d9)' }}
-            >
-              <Edit2 size={15} />
-              Edit Resource
-            </Link>
-            <button
-              onClick={handleDelete}
-              className="flex-1 inline-flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold text-rose-500 bg-rose-50 border border-rose-200 hover:bg-rose-100 transition-colors"
-            >
-              <Trash2 size={15} />
-              Delete
-            </button>
+            {/* Actions Matrix */}
+            <div className="flex flex-col sm:flex-row items-center gap-4 pt-10 border-t border-slate-50">
+              <Link
+                to={`/admin/resources/edit/${resource.id}`}
+                className="flex-1 inline-flex items-center justify-center gap-3 w-full py-6 bg-slate-900 text-white rounded-[2rem] font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
+              >
+                <Edit2 size={16} /> Update Registry Node
+              </Link>
+              <button
+                onClick={handleDelete}
+                className="flex-1 inline-flex items-center justify-center gap-3 w-full py-6 bg-rose-50 text-rose-500 border border-rose-100 rounded-[2rem] font-black text-[11px] uppercase tracking-widest hover:bg-rose-100 transition-all active:scale-95"
+              >
+                <Trash2 size={16} /> Terminate Record
+              </button>
+            </div>
           </div>
         </div>
       </div>
