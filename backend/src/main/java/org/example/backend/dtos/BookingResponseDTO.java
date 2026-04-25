@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 @Builder
 public class BookingResponseDTO {
     private String id;
-    private Long userId;
-    private Long resourceId;
+    private String userId;
+    private String resourceId;
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private String purpose;
@@ -23,4 +23,8 @@ public class BookingResponseDTO {
     private BookingStatus status;
     private String rejectionReason;
     private LocalDateTime createdAt;
+
+    public BookingStatus getStatus() {
+        return status;
+    }
 }

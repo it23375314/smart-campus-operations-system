@@ -16,7 +16,7 @@ import java.util.HashMap;
 
 @RestController
 @RequestMapping("/api/incidents")
-@CrossOrigin(origins = { "http://localhost:5173", "http://localhost:5174" }) // This allows both React frontend ports
+@CrossOrigin(originPatterns = { "http://localhost:*", "http://127.0.0.1:*" })
 public class IncidentController {
 
     private static final String REFERENCE_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";

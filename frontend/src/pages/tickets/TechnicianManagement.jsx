@@ -5,6 +5,7 @@ import {
   Mail, Tag, UserCheck, Loader2, Search, Filter
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from '../../services/api';
 
 const CATEGORY_COLORS = {
   'IT Support':  'bg-indigo-100 text-indigo-700 border-indigo-200',
@@ -25,9 +26,11 @@ const TechnicianManagement = () => {
 
   const fetchTechnicians = () => {
     setLoading(true);
-    fetch('http://localhost:8080/api/technicians')
-      .then(res => res.json())
-      .then(data => setTechnicians(data))
+    API.get('/technicians')
+      .then((res) => {
+        const data = Array.isArray(res?.data) ? res.data : [];
+        setTechnicians(data);
+      })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
   };
@@ -38,15 +41,9 @@ const TechnicianManagement = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const response = await fetch('http://localhost:8080/api/technicians', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, category }),
-      });
-      if (response.ok) {
-        setName(''); setEmail(''); setCategory('IT Support');
-        fetchTechnicians();
-      }
+      await API.post('/technicians', { name, email, category });
+      setName(''); setEmail(''); setCategory('IT Support');
+      fetchTechnicians();
     } catch (error) {
       console.error('Error adding technician:', error);
     } finally {
@@ -57,7 +54,7 @@ const TechnicianManagement = () => {
   const handleDelete = async (id) => {
     if (!window.confirm('Are you sure you want to remove this technician?')) return;
     try {
-      await fetch(`http://localhost:8080/api/technicians/${id}`, { method: 'DELETE' });
+      await API.delete(`/technicians/${id}`);
       fetchTechnicians();
     } catch (error) {
       console.error('Error deleting:', error);

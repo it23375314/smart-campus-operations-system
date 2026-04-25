@@ -3,6 +3,7 @@ package org.example.backend.controllers;
 import jakarta.validation.Valid;
 import org.example.backend.dtos.BookingRequestDTO;
 import org.example.backend.dtos.BookingResponseDTO;
+import org.example.backend.dtos.RejectRequestDTO;
 import org.example.backend.models.Role;
 import org.example.backend.services.BookingService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -11,22 +12,31 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.example.backend.exceptions.ForbiddenException;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import org.example.backend.dtos.AvailabilitySlotDTO;
+import org.example.backend.dtos.AnalyticsSummaryDTO;
+import org.example.backend.dtos.ResourceUsageDTO;
+import org.example.backend.dtos.PeakHourDTO;
+import org.example.backend.services.ResourceService;
 
 @RestController
 @RequestMapping("/bookings")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT, RequestMethod.DELETE, RequestMethod.PATCH, RequestMethod.OPTIONS})
 public class BookingController {
 
     @Autowired
     private BookingService bookingService;
 
+    @Autowired
+    private ResourceService resourceService;
+
     // USER: Create booking
     @PostMapping
     public ResponseEntity<BookingResponseDTO> createBooking(
             @Valid @RequestBody BookingRequestDTO request,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return new ResponseEntity<>(bookingService.createBooking(request, currentUserId, currentUserRole), HttpStatus.CREATED);
     }
@@ -34,7 +44,7 @@ public class BookingController {
     // USER: View own bookings
     @GetMapping("/my")
     public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         if (currentUserRole != Role.USER) {
             throw new ForbiddenException("This endpoint is for students/users only.");
@@ -45,9 +55,9 @@ public class BookingController {
     // ADMIN/MANAGER: View all bookings with optional filtering
     @GetMapping
     public ResponseEntity<List<BookingResponseDTO>> getAllBookings(
-            @RequestParam(required = false) Long userId,
-            @RequestParam(required = false) Long resourceId,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestParam(required = false) String userId,
+            @RequestParam(required = false) String resourceId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         if (currentUserRole == Role.USER) {
             throw new ForbiddenException("Users cannot access the global bookings list. Use /my instead.");
@@ -58,7 +68,7 @@ public class BookingController {
     @GetMapping("/{id}")
     public ResponseEntity<BookingResponseDTO> getBookingById(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.getBookingById(id, currentUserId, currentUserRole));
     }
@@ -68,7 +78,7 @@ public class BookingController {
     public ResponseEntity<BookingResponseDTO> updateBooking(
             @PathVariable String id, 
             @Valid @RequestBody BookingRequestDTO request,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.updateBooking(id, request, currentUserId, currentUserRole));
     }
@@ -77,7 +87,7 @@ public class BookingController {
     @PatchMapping("/{id}/approve")
     public ResponseEntity<BookingResponseDTO> approveBooking(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.approveBooking(id, currentUserId, currentUserRole));
     }
@@ -86,17 +96,17 @@ public class BookingController {
     @PatchMapping("/{id}/reject")
     public ResponseEntity<BookingResponseDTO> rejectBooking(
             @PathVariable String id,
-            @RequestParam String reason,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @Valid @RequestBody RejectRequestDTO rejectRequest,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
-        return ResponseEntity.ok(bookingService.rejectBooking(id, reason, currentUserId, currentUserRole));
+        return ResponseEntity.ok(bookingService.rejectBooking(id, rejectRequest.getReason(), currentUserId, currentUserRole));
     }
 
     // USER: Cancel own
     @PatchMapping("/{id}/cancel")
     public ResponseEntity<BookingResponseDTO> cancelBooking(
             @PathVariable String id,
-            @RequestHeader("X-User-Id") Long currentUserId,
+            @RequestHeader("X-User-Id") String currentUserId,
             @RequestHeader("X-User-Role") Role currentUserRole) {
         return ResponseEntity.ok(bookingService.cancelBooking(id, currentUserId, currentUserRole));
     }
@@ -114,5 +124,47 @@ public class BookingController {
     @GetMapping("/stats")
     public ResponseEntity<Map<String, Long>> getStats() {
         return ResponseEntity.ok(bookingService.getStats());
+    }
+
+    @GetMapping("/availability")
+    public ResponseEntity<List<AvailabilitySlotDTO>> getAvailability(
+            @RequestParam String resourceId,
+            @RequestParam LocalDate date) {
+        
+        // Validation: resourceId must exist
+        resourceService.getResourceById(resourceId)
+                .orElseThrow(() -> new org.example.backend.exceptions.ResourceNotFoundException("Resource not found with id: " + resourceId));
+        
+        return ResponseEntity.ok(bookingService.getAvailability(resourceId, date));
+    }
+
+    // Analytics: Summary
+    @GetMapping("/analytics/summary")
+    public ResponseEntity<AnalyticsSummaryDTO> getSummaryAnalytics(
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
+            throw new ForbiddenException("Unauthorized to view analytics.");
+        }
+        return ResponseEntity.ok(bookingService.getSummaryAnalytics());
+    }
+
+    // Analytics: Popular Resources
+    @GetMapping("/analytics/popular-resources")
+    public ResponseEntity<List<ResourceUsageDTO>> getPopularResources(
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
+            throw new ForbiddenException("Unauthorized to view analytics.");
+        }
+        return ResponseEntity.ok(bookingService.getPopularResources());
+    }
+
+    // Analytics: Peak Hours
+    @GetMapping("/analytics/peak-hours")
+    public ResponseEntity<List<PeakHourDTO>> getPeakHours(
+            @RequestHeader("X-User-Role") Role currentUserRole) {
+        if (currentUserRole != Role.ADMIN && currentUserRole != Role.MANAGER) {
+            throw new ForbiddenException("Unauthorized to view analytics.");
+        }
+        return ResponseEntity.ok(bookingService.getPeakHours());
     }
 }

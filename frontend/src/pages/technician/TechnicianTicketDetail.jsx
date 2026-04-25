@@ -8,6 +8,7 @@ import {
   Shield, AlertCircle, FileText, Paperclip, X, CircleDot,
   CheckSquare, Pencil, Trash2
 } from 'lucide-react';
+import API from '../../services/api';
 
 /* ─── Helpers ──────────────────────────────────────────────── */
 const stripHtml = (v) => v ? String(v).replace(/<[^>]*>/g, '').replace(/\s+/g, ' ').trim() : '';
@@ -41,6 +42,20 @@ const parseCommentDateTime = (remark) => {
   } catch {
     return { dateStr: timestamp, timeStr: '' };
   }
+};
+
+const getRemarkAuthorMeta = (remark) => {
+  const text = String(remark || '');
+  const adminMatch = text.match(/-\s*Admin\s*\((.*?)\)\s*:/i);
+  if (adminMatch) return { role: 'ADMIN', identity: String(adminMatch[1] || '').trim().toLowerCase() };
+
+  const techMatch = text.match(/-\s*Technician\s*\((.*?)\)\s*:/i);
+  if (techMatch) return { role: 'TECHNICIAN', identity: String(techMatch[1] || '').trim().toLowerCase() };
+
+  const userMatch = text.match(/-\s*(User|Student)\s*\((.*?)\)\s*:/i);
+  if (userMatch) return { role: 'USER', identity: String(userMatch[2] || '').trim().toLowerCase() };
+
+  return { role: 'SYSTEM', identity: '' };
 };
 
 /* ─── Status config ─────────────────────────────────────────── */
@@ -88,6 +103,7 @@ const TechnicianTicketDetail = () => {
   const { id } = useParams();
 
   const [incident, setIncident]       = useState(null);
+  const [accessDenied, setAccessDenied] = useState(false);
   const [status, setStatus]           = useState('');
   const [resolutionNote, setNote]     = useState('');
   const [submitting, setSubmitting]   = useState(false);
@@ -98,17 +114,38 @@ const TechnicianTicketDetail = () => {
   const [editingText, setEditingText]     = useState('');
 
   const user     = JSON.parse(localStorage.getItem('user') || '{}');
-  const techName = user?.username || 'Technician';
+  const techName = user?.username || user?.name || 'Technician';
+  const techIdentity = String(user?.username || user?.name || user?.email || user?.id || '').trim().toLowerCase();
+
+  const isOwnTechnicianRemark = (remark) => {
+    const author = getRemarkAuthorMeta(remark);
+    return author.role === 'TECHNICIAN' && Boolean(techIdentity) && author.identity === techIdentity;
+  };
+
+  const isAssignedToCurrentTech = (ticket) => {
+    const assignedId = String(ticket?.assignedTechnicianId ?? '');
+    const currentId = String(user?.id ?? '');
+    const assignedName = String(ticket?.assignedTechnicianName ?? '').toLowerCase().trim();
+    const currentName = String(techName ?? '').toLowerCase().trim();
+    return (assignedId && currentId && assignedId === currentId) || (assignedName && currentName && assignedName === currentName);
+  };
 
   /* Fetch incident */
   const fetchIncident = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setIncident(data);
-        setStatus(data.status || 'OPEN');
+      setAccessDenied(false);
+      const res = await API.get(`/incidents/${id}`);
+      const data = res?.data;
+      if (!data) return;
+
+      if (!isAssignedToCurrentTech(data)) {
+        setIncident(null);
+        setAccessDenied(true);
+        return;
       }
+
+      setIncident(data);
+      setStatus(data.status || 'OPEN');
     } catch (err) { console.error(err); }
   };
 
@@ -130,7 +167,7 @@ const TechnicianTicketDetail = () => {
 
     const existingRemarks = incident.remarksHistory || [];
     const updatedRemarks  = resolutionNote.trim()
-      ? [...existingRemarks, `[${new Date().toISOString()}] - Technician (${user.username || 'Tech'}): ${resolutionNote.trim()}`]
+      ? [...existingRemarks, `[${new Date().toISOString()}] - Technician (${user?.username || user?.name || user?.email || 'Tech'}): ${resolutionNote.trim()}`]
       : existingRemarks;
 
     const payload = {
@@ -140,19 +177,11 @@ const TechnicianTicketDetail = () => {
     };
 
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        setNote('');
-        setSaveSuccess(true);
-        await fetchIncident();
-        setTimeout(() => setSaveSuccess(false), 3000);
-      } else {
-        alert(`Error: ${res.statusText}`);
-      }
+      await API.put(`/incidents/${id}`, payload);
+      setNote('');
+      setSaveSuccess(true);
+      await fetchIncident();
+      setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       alert('Failed to save. Please try again.');
     } finally {
@@ -166,7 +195,7 @@ const TechnicianTicketDetail = () => {
     const originalRemark = updatedRemarks[idx];
     
     // Strict ownership check
-    const isOwn = originalRemark.includes(`Technician (${user.username})`);
+    const isOwn = isOwnTechnicianRemark(originalRemark);
     if (!isOwn) {
       alert("Permission denied: You can only edit your own comments.");
       setEditingIndex(null);
@@ -178,16 +207,10 @@ const TechnicianTicketDetail = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
-      });
-      if (res.ok) {
-        setIncident({ ...incident, remarksHistory: updatedRemarks });
-        setEditingIndex(null);
-        setEditingText('');
-      }
+      await API.put(`/incidents/${id}`, { ...incident, remarksHistory: updatedRemarks });
+      setIncident({ ...incident, remarksHistory: updatedRemarks });
+      setEditingIndex(null);
+      setEditingText('');
     } catch (err) {
       alert('Failed to update comment');
     } finally {
@@ -199,7 +222,7 @@ const TechnicianTicketDetail = () => {
     const originalRemark = incident.remarksHistory[idx];
     
     // Strict ownership check
-    const isOwn = originalRemark.includes(`Technician (${user.username})`);
+    const isOwn = isOwnTechnicianRemark(originalRemark);
     if (!isOwn) {
       alert("Permission denied: You can only delete your own comments.");
       return;
@@ -210,14 +233,8 @@ const TechnicianTicketDetail = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
-      });
-      if (res.ok) {
-        setIncident({ ...incident, remarksHistory: updatedRemarks });
-      }
+      await API.put(`/incidents/${id}`, { ...incident, remarksHistory: updatedRemarks });
+      setIncident({ ...incident, remarksHistory: updatedRemarks });
     } catch (err) {
       alert('Failed to delete comment');
     } finally {
@@ -225,6 +242,22 @@ const TechnicianTicketDetail = () => {
     }
   };
 
+
+  if (accessDenied) return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="max-w-md text-center bg-white border border-rose-100 rounded-3xl p-8 shadow-lg">
+        <AlertCircle size={40} className="mx-auto text-rose-500 mb-4" />
+        <h2 className="text-lg font-black text-slate-900 mb-2">Access denied</h2>
+        <p className="text-sm text-slate-500 font-medium mb-6">This ticket is not assigned to you.</p>
+        <Link
+          to="/technician/tickets"
+          className="inline-flex items-center gap-2 px-5 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+        >
+          <ArrowLeft size={13} /> Back to My Tickets
+        </Link>
+      </div>
+    </div>
+  );
 
   /* ── Loading ──────────────────────────────────────────── */
   if (!incident) return (
@@ -414,7 +447,7 @@ const TechnicianTicketDetail = () => {
                       const isTech    = remark.includes('Technician');
                       const isAdmin   = remark.includes('Admin');
                       const isUser    = remark.includes('User') || remark.includes('Student');
-                      const isOwn     = isTech && user.username && remark.includes(`Technician (${user.username})`);
+                      const isOwn     = isOwnTechnicianRemark(remark);
                       
                       const parts     = remark.split(': ');
                       const message   = parts.slice(1).join(': ');

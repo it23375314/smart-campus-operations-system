@@ -6,6 +6,7 @@ import {
   Zap, MapPin, Search, ChevronRight, CircleDot, Filter,
   ListChecks, ArrowLeft
 } from 'lucide-react';
+import API from '../../services/api';
 
 /* ─── Helpers ──────────────────────────────────────────────── */
 const fmtDate = (incident) => {
@@ -53,24 +54,29 @@ const TechnicianTickets = () => {
   const [activeFilter, setActiveFilter] = useState(initialFilter);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const techName = user?.username || '';
+  const techName = user?.username || user?.name || '';
+
+  const isAssignedToCurrentTech = (ticket) => {
+    const assignedId = String(ticket?.assignedTechnicianId ?? '');
+    const currentId = String(user?.id ?? '');
+    const assignedName = String(ticket?.assignedTechnicianName ?? '').toLowerCase().trim();
+    const currentName = String(techName ?? '').toLowerCase().trim();
+    return (assignedId && currentId && assignedId === currentId) || (assignedName && currentName && assignedName === currentName);
+  };
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:8080/api/incidents')
-      .then(r => r.json())
-      .then(data => {
-        const myTickets = data.filter(i =>
-          i.assignedTechnicianName?.toLowerCase() === techName.toLowerCase() ||
-          i.assignedTechnicianId === user.id
-        );
-        let finalTickets = myTickets.length > 0 ? myTickets : data;
+    API.get('/incidents')
+      .then((res) => {
+        const data = Array.isArray(res?.data) ? res.data : [];
+        const myTickets = data.filter(isAssignedToCurrentTech);
+        let finalTickets = myTickets;
         finalTickets.sort((a, b) => new Date(b.createdAt || b.dateReported) - new Date(a.createdAt || a.dateReported));
         setIncidents(finalTickets);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [techName, user.id]);
 
   /* Filter + search */
   const matchesFilter = (i) => {

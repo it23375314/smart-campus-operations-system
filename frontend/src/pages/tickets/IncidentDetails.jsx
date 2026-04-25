@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import API from '../../services/api';
 
 /* ─────────────────────────────────────────────────────────────────
    Helpers
@@ -65,6 +66,14 @@ const parseCommentDateTime = (remark) => {
   } catch {
     return { dateStr: timestamp, timeStr: '', fullStr: timestamp };
   }
+};
+
+const getRemarkRole = (remark) => {
+  const text = String(remark || '');
+  if (/-\s*Admin(\s*\(.*?\))?\s*:/i.test(text)) return 'ADMIN';
+  if (/-\s*Technician(\s*\(.*?\))?\s*:/i.test(text)) return 'TECHNICIAN';
+  if (/-\s*(Student|User)(\s*\(.*?\))?\s*:/i.test(text)) return 'USER';
+  return 'SYSTEM';
 };
 
 /* ─────────────────────────────────────────────────────────────────
@@ -138,29 +147,57 @@ const IncidentDetails = () => {
   const [editingText, setEditingText]       = useState('');
   const [replyFocused, setReplyFocused]     = useState(false);
 
+  const rawUser = localStorage.getItem('user');
+  const parsedUser = rawUser ? JSON.parse(rawUser) : null;
   const currentUserEmail = localStorage.getItem('scos.email') || localStorage.getItem('scos.reportedBy') || '';
   const currentUserRole = localStorage.getItem('scos.role') || '';
   const isCurrentUserAdmin = currentUserRole === 'ADMIN' || currentUserRole === 'Admin';
+
+  const normalize = (v) => String(v || '').trim().toLowerCase();
+  const currentUserIdentities = [
+    parsedUser?.email,
+    parsedUser?.name,
+    parsedUser?.username,
+    currentUserEmail,
+    localStorage.getItem('scos.email'),
+    localStorage.getItem('scos.reportedBy'),
+  ].map(normalize).filter(Boolean);
+  const incidentReporterIdentities = [incident?.email, incident?.reportedBy].map(normalize).filter(Boolean);
+  const currentUserIdentity = currentUserIdentities[0] || '';
+  const incidentReporterIdentity = incidentReporterIdentities[0] || '';
+  const isReporter = currentUserIdentities.some(identity => incidentReporterIdentities.includes(identity));
+
+  const canCurrentUserDeleteComment = (remark) => {
+    const role = getRemarkRole(remark);
+    return isReporter && role === 'USER';
+  };
+
+  const canCurrentUserEditComment = (remark) => {
+    const role = getRemarkRole(remark);
+    return isReporter && role === 'USER';
+  };
 
   useEffect(() => { fetchIncident(); }, [id]);
 
   const fetchIncident = async () => {
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`);
-      if (res.ok) {
-        const data = await res.json();
-        setIncident(data);
-        setComments(
-          Array.isArray(data.remarksHistory)
-            ? data.remarksHistory.map((r, i) => ({ id: `${data.id || id}-${i}-${r}`, text: r }))
-            : []
-        );
-      }
+      const res = await API.get(`/incidents/${id}`);
+      const data = res?.data;
+      setIncident(data);
+      setComments(
+        Array.isArray(data?.remarksHistory)
+          ? data.remarksHistory.map((r, i) => ({ id: `${data.id || id}-${i}-${r}`, text: r }))
+          : []
+      );
     } catch (err) { console.error(err); }
   };
 
   const handleEditComment = (cid, remarkText) => {
     const remark  = remarkText ?? comments.find(c => c.id === cid)?.text ?? '';
+    if (!canCurrentUserEditComment(remark)) {
+      alert('Permission denied: You can only edit your own comments.');
+      return;
+    }
     const message = remark.split(': ').slice(1).join(': ');
     setEditingCId(cid);
     setEditingText(message);
@@ -168,12 +205,7 @@ const IncidentDetails = () => {
 
   const patchRemarks = async (updatedComments) => {
     const updatedRemarks = updatedComments.map(c => c.text);
-    const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-      method:  'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ remarksHistory: updatedRemarks }),
-    });
-    if (!res.ok) throw new Error(res.statusText);
+    await API.put(`/incidents/${id}`, { remarksHistory: updatedRemarks });
     return updatedRemarks;
   };
 
@@ -195,6 +227,12 @@ const IncidentDetails = () => {
 
   const handleSaveEdit = async (cid) => {
     if (!editingText.trim()) { alert('Comment cannot be empty'); return; }
+    const target = comments.find(c => c.id === cid);
+    if (!target || !canCurrentUserEditComment(target.text)) {
+      alert('Permission denied: You can only edit your own comments.');
+      return;
+    }
+
     const updated = comments.map(c => {
       if (c.id !== cid) return c;
       return { ...c, text: `${c.text.split(': ')[0]}: ${editingText}` };
@@ -210,6 +248,12 @@ const IncidentDetails = () => {
   };
 
   const handleDeleteComment = async (cid) => {
+    const target = comments.find(c => c.id === cid);
+    if (!target || !canCurrentUserDeleteComment(target.text)) {
+      alert('Permission denied: You can only delete your own comments.');
+      return;
+    }
+
     if (!window.confirm('Delete this comment?')) return;
     const updated = comments.filter(c => c.id !== cid);
     setIsSubmitting(true);
@@ -225,11 +269,8 @@ const IncidentDetails = () => {
     if (!window.confirm('Close this ticket? Only an admin can reopen it.')) return;
     setIsSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'CLOSED' }),
-      });
-      if (res.ok) fetchIncident();
+      await API.put(`/incidents/${id}`, { status: 'CLOSED' });
+      fetchIncident();
     } catch (err) { console.error(err); }
     finally { setIsSubmitting(false); }
   };
@@ -633,11 +674,11 @@ const IncidentDetails = () => {
                       const isTech    = remark.includes('Technician');
                       const isUser    = remark.includes('User') || remark.includes('Student');
                       
-                      const isReporter= isUser && (currentUserEmail === incident?.email || currentUserEmail === incident?.reportedBy);
+                      const isCommentByReporter = isUser && isReporter;
                       const isTechnicianComment = !isUser && !isAdmin;
-                      const isCurrentUserCommentAuthor = (isUser && isReporter) || (isTechnicianComment && isCurrentUserAdmin) || (isAdmin && isCurrentUserAdmin);
-                      const canEditComment = isCurrentUserCommentAuthor;
-                      const canDeleteComment = (isReporter && isUser) || (isCurrentUserAdmin);
+                      const isCurrentUserCommentAuthor = (isUser && isCommentByReporter) || (isTechnicianComment && isCurrentUserAdmin) || (isAdmin && isCurrentUserAdmin);
+                      const canEditComment = canCurrentUserEditComment(remark);
+                      const canDeleteComment = canCurrentUserDeleteComment(remark);
                       const parts     = remark.split(': ');
                       const message   = parts.slice(1).join(': ');
                       const author    = isAdmin ? 'Admin' : (isTech ? 'Technician' : (isUser ? 'User' : 'System'));

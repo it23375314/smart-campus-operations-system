@@ -6,6 +6,7 @@ import {
   Tag, RefreshCw, ChevronRight, MapPin
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from '../../services/api';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -15,6 +16,31 @@ const stripHtmlToText = (value) => {
 };
 
 const safeLower = (value) => String(value ?? '').toLowerCase();
+
+const normalizeStatus = (status) => {
+  const value = safeLower(status).replace(/[^a-z]/g, '_').replace(/_+/g, '_').replace(/^_+|_+$/g, '');
+  if (value === 'pending') return 'OPEN';
+  if (value === 'in_progress' || value === 'inprogress') return 'IN_PROGRESS';
+  if (value === 'open') return 'OPEN';
+  if (value === 'resolved') return 'RESOLVED';
+  if (value === 'closed') return 'CLOSED';
+  if (value === 'rejected') return 'REJECTED';
+  return String(status ?? '').toUpperCase();
+};
+
+const getCurrentUserStorageKey = () => {
+  try {
+    const explicit = String(localStorage.getItem('scos.currentUserKey') || '').trim();
+    if (explicit) return explicit;
+
+    const rawUser = localStorage.getItem('user');
+    const user = rawUser ? JSON.parse(rawUser) : null;
+    const keySource = String(user?.id || user?.email || user?.name || '').trim().toLowerCase();
+    return keySource ? `u:${keySource}` : '';
+  } catch {
+    return '';
+  }
+};
 
 const formatIncidentCreatedAt = (incident) => {
   const raw = incident?.createdAt || incident?.dateReported;
@@ -50,11 +76,11 @@ const PRIORITY_CONFIG = {
 /* ─── Status Badge ───────────────────────────────────────── */
 
 const StatusBadge = ({ status }) => {
-  const cfg = STATUS_CONFIG[status] || STATUS_CONFIG.OPEN;
+  const cfg = STATUS_CONFIG[normalizeStatus(status)] || STATUS_CONFIG.OPEN;
   const Icon = cfg.icon;
   return (
     <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest border whitespace-nowrap ${cfg.badge}`}>
-      <Icon size={12} className={status === 'IN_PROGRESS' ? 'animate-spin' : ''} />
+      <Icon size={12} className={normalizeStatus(status) === 'IN_PROGRESS' ? 'animate-spin' : ''} />
       {cfg.label}
     </span>
   );
@@ -70,20 +96,29 @@ const MyIncidents = () => {
 
   const fetchIncidents = () => {
     setLoading(true);
-    fetch('http://localhost:8080/api/incidents')
-      .then(res => res.json())
-      .then(data => {
+    API.get('/incidents')
+      .then((res) => {
+        const data = res?.data;
         const all = Array.isArray(data) ? data : [];
         let myIncidentIds = [];
         let email = '';
         let reportedBy = '';
 
         try {
-          const rawIds = localStorage.getItem('scos.myIncidentIds');
+          const userKey = getCurrentUserStorageKey();
+          const scopedIdsKey = userKey ? `scos.myIncidentIds.${userKey}` : '';
+
+          const rawIds = scopedIdsKey
+            ? localStorage.getItem(scopedIdsKey)
+            : localStorage.getItem('scos.myIncidentIds');
           const parsedIds = rawIds ? JSON.parse(rawIds) : [];
           myIncidentIds      = Array.isArray(parsedIds) ? parsedIds : [];
-          email              = localStorage.getItem('scos.email') || '';
-          reportedBy         = localStorage.getItem('scos.reportedBy') || '';
+
+          const rawUser = localStorage.getItem('user');
+          const user = rawUser ? JSON.parse(rawUser) : null;
+
+          email = user?.email || localStorage.getItem('scos.email') || '';
+          reportedBy = user?.name || localStorage.getItem('scos.reportedBy') || '';
         } catch { /* ignore */ }
 
         let myTickets = all;
@@ -99,7 +134,10 @@ const MyIncidents = () => {
 
         setIncidents(myTickets.slice().reverse());
       })
-      .catch(err => console.error('Error:', err))
+      .catch((err) => {
+        console.error('Error loading incidents:', err);
+        setIncidents([]);
+      })
       .finally(() => setLoading(false));
   };
 
@@ -113,7 +151,7 @@ const MyIncidents = () => {
       safeLower(incident?.title).includes(s) ||
       safeLower(incident?.id).includes(s) ||
       safeLower(incident?.referenceId).includes(s);
-    const matchStatus = filterStatus === 'All' || incident.status === filterStatus;
+    const matchStatus = filterStatus === 'All' || normalizeStatus(incident.status) === filterStatus;
     return matchSearch && matchStatus;
   });
 
@@ -232,7 +270,7 @@ const MyIncidents = () => {
         <div className="grid grid-cols-1 gap-5">
           <AnimatePresence>
             {filtered.map((incident, index) => {
-              const cfg = STATUS_CONFIG[incident.status] || STATUS_CONFIG.OPEN;
+              const cfg = STATUS_CONFIG[normalizeStatus(incident.status)] || STATUS_CONFIG.OPEN;
 
               return (
                 <motion.div

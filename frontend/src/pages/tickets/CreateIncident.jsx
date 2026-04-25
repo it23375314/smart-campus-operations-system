@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AlertCircle, Send, CheckCircle, ArrowLeft, Loader2, X, Paperclip, RotateCcw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from '../../services/api';
 
 // Import Medium Editor and its default themes
 import MediumEditor from 'medium-editor';
@@ -189,26 +190,27 @@ export default function CreateIncident() {
         proofUrls: base64Files,
       };
 
-      const response = await fetch('http://localhost:8080/api/incidents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newIncident),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        const errorMsg = errorData.message || `Server error: ${response.status}`;
-        throw new Error(errorMsg);
-      }
-
-      const createdIncident = await response.json();
+      const response = await API.post('/incidents', newIncident);
+      const createdIncident = response.data;
       if (createdIncident?.id) {
         try {
-          const raw = localStorage.getItem('scos.myIncidentIds');
+          const explicitUserKey = String(localStorage.getItem('scos.currentUserKey') || '').trim();
+          let inferredUserKey = '';
+          if (!explicitUserKey) {
+            const rawUser = localStorage.getItem('user');
+            const user = rawUser ? JSON.parse(rawUser) : null;
+            const keySource = String(user?.id || user?.email || user?.name || '').trim().toLowerCase();
+            inferredUserKey = keySource ? `u:${keySource}` : '';
+          }
+
+          const userKey = explicitUserKey || inferredUserKey;
+          const idsKey = userKey ? `scos.myIncidentIds.${userKey}` : 'scos.myIncidentIds';
+
+          const raw = localStorage.getItem(idsKey);
           const existing = raw ? JSON.parse(raw) : [];
           const next = Array.isArray(existing) ? existing : [];
           if (!next.includes(createdIncident.id)) next.unshift(createdIncident.id);
-          localStorage.setItem('scos.myIncidentIds', JSON.stringify(next.slice(0, 200)));
+          localStorage.setItem(idsKey, JSON.stringify(next.slice(0, 200)));
         } catch {
           // ignore storage failures
         }

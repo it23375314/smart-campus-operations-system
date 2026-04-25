@@ -8,6 +8,7 @@ import {
   Shield, Zap, Pencil, Trash2, ChevronRight, CircleDot,
   Calendar, FileText, MoreHorizontal, Search
 } from 'lucide-react';
+import API from '../../services/api';
 
 /* ─────────────────────────────────────────────────────────────────
    Helpers & Config
@@ -93,6 +94,20 @@ const parseCommentDateTime = (remark) => {
   }
 };
 
+const getRemarkAuthorMeta = (remark) => {
+  const text = String(remark || '');
+  const adminMatch = text.match(/-\s*Admin\s*\((.*?)\)\s*:/i);
+  if (adminMatch) return { role: 'ADMIN', identity: String(adminMatch[1] || '').trim().toLowerCase() };
+
+  const techMatch = text.match(/-\s*Technician\s*\((.*?)\)\s*:/i);
+  if (techMatch) return { role: 'TECHNICIAN', identity: String(techMatch[1] || '').trim().toLowerCase() };
+
+  const userMatch = text.match(/-\s*(User|Student)\s*\((.*?)\)\s*:/i);
+  if (userMatch) return { role: 'USER', identity: String(userMatch[2] || '').trim().toLowerCase() };
+
+  return { role: 'SYSTEM', identity: '' };
+};
+
 /* ─── Main Component ────────────────────────────────────── */
 
 const UpdateIncident = () => {
@@ -119,6 +134,12 @@ const UpdateIncident = () => {
   const [historyFilter, setHistoryFilter] = useState('ALL');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
+  const adminIdentity = String(user?.username || user?.name || user?.email || user?.id || '').trim().toLowerCase();
+
+  const isOwnAdminRemark = (remark) => {
+    const author = getRemarkAuthorMeta(remark);
+    return author.role === 'ADMIN' && Boolean(adminIdentity) && author.identity === adminIdentity;
+  };
 
   const proofUrls = Array.isArray(incident?.proofUrls) && incident.proofUrls.length > 0
     ? incident.proofUrls
@@ -128,9 +149,8 @@ const UpdateIncident = () => {
     const loadData = async () => {
       try {
         setIsLoading(true); setLoadError('');
-        const incidentRes = await fetch(`http://localhost:8080/api/incidents/${id}`);
-        if (!incidentRes.ok) throw new Error('Failed to load ticket details');
-        const incidentData = await incidentRes.json();
+        const incidentRes = await API.get(`/incidents/${id}`);
+        const incidentData = incidentRes?.data;
         if (!incidentData) throw new Error('Ticket not found');
         setIncident(incidentData);
         setStatus(incidentData.status || 'OPEN');
@@ -140,10 +160,11 @@ const UpdateIncident = () => {
         setResource(incidentData.resource || '');
         if (incidentData.assignedTechnicianId) setSelectedTechId(incidentData.assignedTechnicianId);
 
-        const techRes = await fetch('http://localhost:8080/api/technicians');
-        if (techRes.ok) setTechnicians(await techRes.json());
+        const techRes = await API.get('/technicians');
+        const techniciansData = Array.isArray(techRes?.data) ? techRes.data : [];
+        setTechnicians(techniciansData);
       } catch (error) {
-        setLoadError(error.message || 'Failed to load ticket details');
+        setLoadError(error?.response?.data?.message || error.message || 'Failed to load ticket details');
       } finally {
         setIsLoading(false);
       }
@@ -160,12 +181,14 @@ const UpdateIncident = () => {
     const assignedTech = technicians.find(t => t.id === selectedTechId);
     const existingRemarks = incident.remarksHistory || [];
     const updatedRemarks = newRemark
-      ? [...existingRemarks, `[${new Date().toISOString()}] - Admin (${user.username || 'Admin'}): ${newRemark}`]
+      ? [...existingRemarks, `[${new Date().toISOString()}] - Admin (${user?.username || user?.name || user?.email || 'Admin'}): ${newRemark}`]
       : existingRemarks;
 
     const payload = {
       status, urgent,
-      priority, resource,
+        // Keep resource and priority immutable from this screen.
+        priority: incident.priority,
+        resource: incident.resource,
       assignedTechnicianId: assignedTech?.id || null,
       assignedTechnicianName: assignedTech?.name || null,
       assignedTechnicianCategory: assignedTech?.category || null,
@@ -175,19 +198,14 @@ const UpdateIncident = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (res.ok) {
-        navigate('/ticket-list');
-      } else {
-        alert(`Error: ${res.status} - ${res.statusText}`);
-      }
+      await API.put(`/incidents/${id}`, payload);
+      navigate('/ticket-list');
     } catch (error) {
       console.error('Update failed', error);
-      alert(`Error updating ticket: ${error.message}`);
+      const statusCode = error?.response?.status;
+      const statusText = error?.response?.statusText;
+      const backendMessage = error?.response?.data?.message;
+      alert(`Error updating ticket: ${backendMessage || error.message}${statusCode ? ` (${statusCode}${statusText ? ` - ${statusText}` : ''})` : ''}`);
     } finally {
       setSubmitting(false);
     }
@@ -199,7 +217,7 @@ const UpdateIncident = () => {
     const originalRemark = updatedRemarks[idx];
 
     // Strict ownership check for editing
-    const isOwn = originalRemark.includes(`Admin (${user.username})`);
+    const isOwn = isOwnAdminRemark(originalRemark);
     if (!isOwn) {
       alert("Permission denied: You can only edit your own comments.");
       setEditingIndex(null);
@@ -211,15 +229,9 @@ const UpdateIncident = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
-      });
-      if (res.ok) {
-        setIncident({ ...incident, remarksHistory: updatedRemarks });
-        setEditingIndex(null);
-      }
+      await API.put(`/incidents/${id}`, { ...incident, remarksHistory: updatedRemarks });
+      setIncident({ ...incident, remarksHistory: updatedRemarks });
+      setEditingIndex(null);
     } catch (error) {
       alert('Failed to update comment');
     } finally {
@@ -233,14 +245,8 @@ const UpdateIncident = () => {
 
     setSubmitting(true);
     try {
-      const res = await fetch(`http://localhost:8080/api/incidents/${id}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...incident, remarksHistory: updatedRemarks }),
-      });
-      if (res.ok) {
-        setIncident({ ...incident, remarksHistory: updatedRemarks });
-      }
+      await API.put(`/incidents/${id}`, { ...incident, remarksHistory: updatedRemarks });
+      setIncident({ ...incident, remarksHistory: updatedRemarks });
     } catch (error) {
       alert('Failed to delete comment');
     } finally {
@@ -447,7 +453,8 @@ const UpdateIncident = () => {
                     <div className="absolute left-0 sm:left-4 top-0 bottom-0 w-px bg-slate-200" />
                     <AnimatePresence mode="popLayout">
                       {(incident.remarksHistory || [])
-                        .filter(remark => {
+                        .map((remark, index) => ({ remark, index }))
+                        .filter(({ remark }) => {
                           const isTech  = remark.includes('Technician');
                           const isAdmin = remark.includes('Admin');
                           const isUser  = remark.includes('User') || remark.includes('Student');
@@ -458,11 +465,11 @@ const UpdateIncident = () => {
                           const searchMatch = !historySearch || remark.toLowerCase().includes(historySearch.toLowerCase());
                           return roleMatch && searchMatch;
                         })
-                        .map((remark, idx) => {
+                        .map(({ remark, index }) => {
                       const isAdmin = remark.includes('Admin');
                       const isTech  = remark.includes('Technician');
                       const isUser  = remark.includes('User') || remark.includes('Student');
-                      const isOwn   = isAdmin && user.username && remark.includes(`Admin (${user.username})`);
+                      const isOwn   = isOwnAdminRemark(remark);
 
                       const parts = remark.split(': ');
                       const message = parts.slice(1).join(': ');
@@ -471,7 +478,7 @@ const UpdateIncident = () => {
 
                       return (
                         <motion.div
-                          key={idx}
+                          key={`${index}-${remark}`}
                           initial={{ opacity: 0, x: -10 }}
                           animate={{ opacity: 1, x: 0 }}
                           className="relative"
@@ -494,18 +501,18 @@ const UpdateIncident = () => {
                                 </div>
                               </div>
 
-                              {editingIndex !== idx && (
+                              {editingIndex !== index && (
                                 <div className="flex items-center gap-1">
                                   {isOwn && (
                                     <button
-                                      onClick={() => { setEditingIndex(idx); setEditingText(message); }}
+                                      onClick={() => { setEditingIndex(index); setEditingText(message); }}
                                       className="p-1.5 text-slate-400 hover:text-indigo-600 transition-all"
                                     >
                                       <Pencil size={12} />
                                     </button>
                                   )}
                                   <button
-                                    onClick={() => handleDeleteComment(idx)}
+                                    onClick={() => handleDeleteComment(index)}
                                     className="p-1.5 text-slate-400 hover:text-rose-600 transition-all"
                                   >
                                     <Trash2 size={12} />
@@ -515,7 +522,7 @@ const UpdateIncident = () => {
                             </div>
 
                             <div className="px-5 py-4">
-                              {editingIndex === idx ? (
+                              {editingIndex === index ? (
                                 <div className="space-y-3">
                                   <textarea
                                     value={editingText}
@@ -525,7 +532,7 @@ const UpdateIncident = () => {
                                   />
                                   <div className="flex justify-end gap-2">
                                     <button onClick={() => setEditingIndex(null)} className="px-3 py-1 text-[10px] font-black uppercase text-slate-500">Cancel</button>
-                                    <button onClick={() => handleSaveEdit(idx)} className="px-3 py-1 text-[10px] font-black uppercase bg-indigo-600 text-white rounded-lg">Save</button>
+                                    <button onClick={() => handleSaveEdit(index)} className="px-3 py-1 text-[10px] font-black uppercase bg-indigo-600 text-white rounded-lg">Save</button>
                                   </div>
                                 </div>
                               ) : (
@@ -601,9 +608,10 @@ const UpdateIncident = () => {
                   <input
                     type="text"
                     value={resource}
-                    onChange={(e) => setResource(e.target.value)}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all placeholder:text-slate-300"
-                    placeholder="Enter location or resource..."
+                    readOnly
+                    disabled
+                    className="w-full px-4 py-3 bg-slate-100 border border-slate-200 rounded-2xl text-sm font-bold text-slate-500 cursor-not-allowed"
+                    placeholder="Resource or location"
                   />
                 </div>
 
@@ -616,12 +624,9 @@ const UpdateIncident = () => {
                     {Object.keys(PRIORITY).map((p) => (
                       <button
                         key={p} type="button"
-                        onClick={() => {
-                          setPriority(p);
-                          setUrgent(p === 'Urgent');
-                        }}
+                        disabled
                         className={`flex items-center gap-2 px-4 py-3 rounded-2xl border-2 transition-all ${
-                          priority === p ? `${PRIORITY[p].pill} ring-2 ring-opacity-50 ${priority === 'Urgent' ? 'ring-rose-200' : priority === 'High' ? 'ring-amber-200' : priority === 'Medium' ? 'ring-indigo-200' : 'ring-slate-200'} scale-[1.02] shadow-md` : 'border-slate-100 bg-slate-50 text-slate-400 grayscale'
+                          priority === p ? `${PRIORITY[p].pill} ring-2 ring-opacity-50 ${priority === 'Urgent' ? 'ring-rose-200' : priority === 'High' ? 'ring-amber-200' : priority === 'Medium' ? 'ring-indigo-200' : 'ring-slate-200'} shadow-sm` : 'border-slate-100 bg-slate-50 text-slate-400 grayscale'
                         }`}
                       >
                         <Zap size={14} fill={priority === p ? 'currentColor' : 'none'} />

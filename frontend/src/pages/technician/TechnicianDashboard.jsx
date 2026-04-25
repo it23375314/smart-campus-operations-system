@@ -6,6 +6,7 @@ import {
   ArrowRight, Zap, TrendingUp, Activity, ListChecks,
   CircleDot, Loader2, Tag, MapPin, ChevronRight, Search, Filter
 } from 'lucide-react';
+import API from '../../services/api';
 
 /* ─── Status config ────────────────────────────────────────── */
 const STATUS_CONFIG = {
@@ -109,27 +110,29 @@ const TechnicianDashboard = () => {
   const [searchTerm, setSearchTerm] = useState('');
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
-  const techName = user?.username || 'Technician';
+  const techName = user?.username || user?.name || '';
+
+  const isAssignedToCurrentTech = (ticket) => {
+    const assignedId = String(ticket?.assignedTechnicianId ?? '');
+    const currentId = String(user?.id ?? '');
+    const assignedName = String(ticket?.assignedTechnicianName ?? '').toLowerCase().trim();
+    const currentName = String(techName ?? '').toLowerCase().trim();
+    return (assignedId && currentId && assignedId === currentId) || (assignedName && currentName && assignedName === currentName);
+  };
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:8080/api/incidents')
-      .then(r => r.json())
-      .then(data => {
-        // In a real app, filter by assignedTechnicianId === user.id
-        // For demo: show all or filter by name match
-        const myTickets = data.filter(i =>
-          i.assignedTechnicianName?.toLowerCase() === techName.toLowerCase() ||
-          i.assignedTechnicianId === user.id
-        );
-        // fallback: show all if none assigned
-        let finalTickets = myTickets.length > 0 ? myTickets : data;
+    API.get('/incidents')
+      .then((res) => {
+        const data = Array.isArray(res?.data) ? res.data : [];
+        const myTickets = data.filter(isAssignedToCurrentTech);
+        let finalTickets = myTickets;
         finalTickets.sort((a, b) => new Date(b.createdAt || b.dateReported) - new Date(a.createdAt || a.dateReported));
         setIncidents(finalTickets);
       })
       .catch(err => console.error(err))
       .finally(() => setLoading(false));
-  }, []);
+  }, [techName, user.id]);
 
   const openCount = incidents.filter(i => i.status === 'OPEN' || i.status === 'Pending').length;
   const inProgressCount = incidents.filter(i => i.status === 'IN_PROGRESS' || i.status === 'In Progress').length;

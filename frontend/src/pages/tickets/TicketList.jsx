@@ -5,6 +5,7 @@ import {
   ChevronRight, Zap, Tag, Users, Settings
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import API from '../../services/api';
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 
@@ -76,12 +77,9 @@ const TicketList = () => {
 
   useEffect(() => {
     setLoading(true);
-    fetch('http://localhost:8080/api/incidents')
-      .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.json();
-      })
-      .then(data => {
+    API.get('/incidents')
+      .then((response) => {
+        const data = Array.isArray(response?.data) ? response.data : [];
         const sorted = [...data].sort((a, b) => getIncidentCreatedAtMillis(b) - getIncidentCreatedAtMillis(a));
         setAllIncidents(sorted);
       })
