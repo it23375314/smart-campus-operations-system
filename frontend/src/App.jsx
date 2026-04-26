@@ -144,7 +144,7 @@ function App() {
 
           {/* Technician Management: Admin manages technician staff */}
           <Route path="/technician-management" element={
-            <ProtectedRoute allowedRoles={['ADMIN', 'TECHNICIAN']}>
+            <ProtectedRoute allowedRoles={['ADMIN']}>
               <TechnicianManagement />
             </ProtectedRoute>
           } />
