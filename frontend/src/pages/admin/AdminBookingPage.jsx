@@ -344,7 +344,7 @@ const AdminBookingPage = () => {
                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Requesting Identity</p>
                              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
                                <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400"><User size={12} /></div>
-                               {booking.userId}
+                               {booking.userName || booking.userId}
                              </div>
                            </div>
 
@@ -352,7 +352,7 @@ const AdminBookingPage = () => {
                              <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Asset Target</p>
                              <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
                                <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-400 flex items-center justify-center"><Package size={12} /></div>
-                               Asset #{booking.resourceId.slice(-6).toUpperCase()}
+                               {booking.resourceName || `Asset #${booking.resourceId.slice(-6).toUpperCase()}`}
                              </div>
                            </div>
 
