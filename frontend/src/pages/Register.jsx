@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const Register = () => {
-    const [formData, setFormData] = useState({ name: '', email: '', password: '' });
+    const [formData, setFormData] = useState({ name: '', email: '', password: '', role: 'USER' });
     const [loading, setLoading] = useState(false);
     const { login } = useAuth();
     const navigate = useNavigate();
@@ -31,8 +31,19 @@ const Register = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Vibrant Background Overlay */}
+            <div 
+              className="absolute inset-0 z-0 opacity-20 pointer-events-none"
+              style={{ 
+                backgroundImage: 'url("/backgrounds/colorful-campus.png")',
+                backgroundSize: 'cover',
+                backgroundPosition: 'center'
+              }}
+            />
+            <div className="absolute inset-0 bg-indigo-600/10 backdrop-blur-sm pointer-events-none" />
+            
+            <div className="bg-white/80 backdrop-blur-xl rounded-[2.5rem] shadow-2xl p-10 w-full max-w-md relative z-10 border border-white/50">
                 <div className="text-center mb-8">
                     <h1 className="text-3xl font-bold text-gray-900">Smart Campus</h1>
                     <p className="text-gray-500 mt-2">Create your account</p>
@@ -67,6 +78,22 @@ const Register = () => {
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                             placeholder="you@example.com"
                         />
+                    </div>
+
+                    <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Identity Type (Clearance Tier)
+                        </label>
+                        <select
+                            name="role"
+                            value={formData.role}
+                            onChange={handleChange}
+                            required
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                        >
+                            <option value="USER">USER (Student/Staff)</option>
+                            <option value="TECHNICIAN">TECHNICIAN (Operational)</option>
+                        </select>
                     </div>
 
                     <div>

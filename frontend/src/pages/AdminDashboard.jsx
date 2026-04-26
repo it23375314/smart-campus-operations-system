@@ -64,7 +64,21 @@ const AdminDashboard = () => {
   const isManager = currentUser?.role === 'MANAGER';
 
   return (
-    <div className="max-w-7xl mx-auto pt-40 pb-12 px-4 space-y-8">
+    <div className="bg-slate-50 min-h-screen pt-40 pb-32 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-slate-50/20 backdrop-blur-[1px] pointer-events-none" />
+      
+      {/* Vibrant Interior Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/colorful-interior.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
+      
+      <div className="max-w-7xl mx-auto relative z-10 space-y-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-4 bg-slate-900 text-white rounded-[2rem] shadow-xl">

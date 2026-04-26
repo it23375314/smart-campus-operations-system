@@ -105,7 +105,7 @@ const BookingDetailsModal = ({ booking, isOpen, onClose }) => {
                                         </div>
                                         <div>
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Resource</p>
-                                            <p className="text-sm font-bold text-slate-700">{booking.resourceId}</p>
+                                            <p className="text-sm font-bold text-slate-700">{booking.resourceName || booking.resourceId}</p>
                                         </div>
                                     </div>
                                     <div className="flex gap-4">
@@ -150,7 +150,7 @@ const BookingDetailsModal = ({ booking, isOpen, onClose }) => {
                                     </div>
                                     <div className="flex-1">
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Submitter Identity</p>
-                                        <p className="text-sm font-bold text-slate-700">{booking.userId}</p>
+                                        <p className="text-sm font-bold text-slate-700">{booking.userName || booking.userId}</p>
                                     </div>
                                 </div>
 

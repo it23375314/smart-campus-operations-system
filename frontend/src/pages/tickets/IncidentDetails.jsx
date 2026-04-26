@@ -146,6 +146,7 @@ const IncidentDetails = () => {
   const [editingCommentId, setEditingCId]   = useState(null);
   const [editingText, setEditingText]       = useState('');
   const [replyFocused, setReplyFocused]     = useState(false);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
   const rawUser = localStorage.getItem('user');
   const parsedUser = rawUser ? JSON.parse(rawUser) : null;
@@ -167,14 +168,32 @@ const IncidentDetails = () => {
   const incidentReporterIdentity = incidentReporterIdentities[0] || '';
   const isReporter = currentUserIdentities.some(identity => incidentReporterIdentities.includes(identity));
 
+  const getRemarkAuthorIdentity = (remark) => {
+    const text = String(remark || '');
+    const userMatch = text.match(/-\s*(User|Student)\s*\((.*?)\)\s*:/i);
+    if (userMatch) return String(userMatch[2] || '').trim().toLowerCase();
+    return '';
+  };
+
   const canCurrentUserDeleteComment = (remark) => {
     const role = getRemarkRole(remark);
-    return isReporter && role === 'USER';
+    if (isCurrentUserAdmin) return true; // Admins can delete any comment
+    if (isReporter && role === 'USER') {
+      // Check if the current user is the author of this comment
+      const authorIdentity = getRemarkAuthorIdentity(remark);
+      return currentUserIdentities.some(id => id === authorIdentity);
+    }
+    return false;
   };
 
   const canCurrentUserEditComment = (remark) => {
     const role = getRemarkRole(remark);
-    return isReporter && role === 'USER';
+    if (isReporter && role === 'USER') {
+      // Check if the current user is the author of this comment
+      const authorIdentity = getRemarkAuthorIdentity(remark);
+      return currentUserIdentities.some(id => id === authorIdentity);
+    }
+    return false;
   };
 
   useEffect(() => { fetchIncident(); }, [id]);
@@ -213,7 +232,8 @@ const IncidentDetails = () => {
     e.preventDefault();
     if (!newNote.trim()) return;
     setIsSubmitting(true);
-    const note = `[${new Date().toISOString()}] - User: ${newNote}`;
+    const userEmail = parsedUser?.email || currentUserEmail || 'User';
+    const note = `[${new Date().toISOString()}] - User (${userEmail}): ${newNote}`;
     const updated = [...comments, { id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`, text: note }];
     try {
       const remarks = await patchRemarks(updated);
@@ -226,10 +246,10 @@ const IncidentDetails = () => {
   };
 
   const handleSaveEdit = async (cid) => {
-    if (!editingText.trim()) { alert('Comment cannot be empty'); return; }
+    if (!editingText.trim()) { setEditingCId(null); setEditingText(''); return; }
     const target = comments.find(c => c.id === cid);
     if (!target || !canCurrentUserEditComment(target.text)) {
-      alert('Permission denied: You can only edit your own comments.');
+      setEditingCId(null); setEditingText('');
       return;
     }
 
@@ -243,25 +263,26 @@ const IncidentDetails = () => {
       setEditingCId(null); setEditingText('');
       setComments(updated);
       setIncident(c => c ? { ...c, remarksHistory: remarks } : c);
-    } catch { alert('Failed to update comment.'); }
+    } catch { /* silent */ }
     finally { setIsSubmitting(false); }
   };
 
   const handleDeleteComment = async (cid) => {
     const target = comments.find(c => c.id === cid);
-    if (!target || !canCurrentUserDeleteComment(target.text)) {
-      alert('Permission denied: You can only delete your own comments.');
-      return;
-    }
+    if (!target || !canCurrentUserDeleteComment(target.text)) return;
+    setConfirmDeleteId(cid);
+  };
 
-    if (!window.confirm('Delete this comment?')) return;
+  const confirmDelete = async () => {
+    const cid = confirmDeleteId;
+    setConfirmDeleteId(null);
     const updated = comments.filter(c => c.id !== cid);
     setIsSubmitting(true);
     try {
       const remarks = await patchRemarks(updated);
       setComments(updated);
       setIncident(c => c ? { ...c, remarksHistory: remarks } : c);
-    } catch { alert('Failed to delete comment.'); }
+    } catch { /* silent */ }
     finally { setIsSubmitting(false); }
   };
 
@@ -955,6 +976,55 @@ const IncidentDetails = () => {
           </div>
         </div>
       </div>
+
+      {/* ── Delete Confirmation Modal ───────────────────────────── */}
+      <AnimatePresence>
+        {confirmDeleteId && (
+          <motion.div
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+            onClick={() => setConfirmDeleteId(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.85, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.85, opacity: 0, y: 20 }}
+              transition={{ type: 'spring', damping: 20, stiffness: 300 }}
+              className="bg-white rounded-3xl shadow-2xl border border-slate-100 p-6 max-w-sm w-full"
+              onClick={e => e.stopPropagation()}
+            >
+              <div className="flex items-center gap-4 mb-5">
+                <div className="w-12 h-12 rounded-2xl bg-rose-100 flex items-center justify-center shrink-0">
+                  <Trash2 size={22} className="text-rose-500" />
+                </div>
+                <div>
+                  <p className="text-sm font-black text-slate-900">Delete Comment?</p>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {isCurrentUserAdmin && comments.find(c => c.id === confirmDeleteId) && !canCurrentUserEditComment(comments.find(c => c.id === confirmDeleteId)?.text || '')
+                      ? 'Admin moderation — this cannot be undone.'
+                      : 'This action cannot be undone.'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConfirmDeleteId(null)}
+                  className="flex-1 py-2.5 px-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-black text-xs uppercase tracking-widest transition-all"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={isSubmitting}
+                  className="flex-1 py-2.5 px-4 bg-rose-600 hover:bg-rose-700 text-white rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg shadow-rose-200 disabled:opacity-50"
+                >
+                  {isSubmitting ? <Loader2 size={12} className="animate-spin mx-auto" /> : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* ── Image Lightbox ────────────────────────────────────────── */}
       <AnimatePresence>
