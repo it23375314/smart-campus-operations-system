@@ -102,8 +102,8 @@ const Navbar = () => {
     switch (user.role) {
       case 'ADMIN':
         return [
-          { path: '/admin', label: 'Admin Panel', icon: <LayoutDashboard size={18} /> },
-          { path: '/ticket-list', label: 'Incidents', icon: <AlertCircle size={18} /> },
+          { path: '/admin', label: 'Resource Management', icon: <LayoutDashboard size={18} /> },
+          { path: '/ticket-list', label: 'Incident Management', icon: <AlertCircle size={18} /> },
         ];
       case 'MANAGER':
         return [
@@ -131,12 +131,9 @@ const Navbar = () => {
     switch (user.role) {
       case "ADMIN":
         return [
-          { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
           { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
-          { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
-          { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
-          { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
         ];
       case "MANAGER":
         return [
@@ -212,21 +209,32 @@ const Navbar = () => {
                   <ChevronDown size={12} className="group-hover/mgmt:rotate-180 transition-transform ml-1" />
                 </button>
                 
-                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl py-3 opacity-0 invisible translate-y-2 group-hover/mgmt:opacity-100 group-hover/mgmt:visible group-hover/mgmt:translate-y-0 transition-all z-[200]">
-                  {managementItems.map((item) => (
-                    <NavLink
-                      key={item.path}
-                      to={item.path}
-                      className={({ isActive }) => `
-                        flex items-center gap-3 px-5 py-3 text-sm font-bold transition-all
-                        ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'}
-                      `}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </NavLink>
-                  ))}
-                </div>
+                 <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl py-3 opacity-0 invisible translate-y-2 group-hover/mgmt:opacity-100 group-hover/mgmt:visible group-hover/mgmt:translate-y-0 transition-all z-[200]">
+                   {managementItems.map((item, idx) => (
+                     <React.Fragment key={item.path}>
+                       {/* Add a divider before the critical management tools if it's the second half of the list */}
+                       {idx === 3 && <div className="h-px bg-slate-100 my-2 mx-4" />}
+                       <NavLink
+                         to={item.path}
+                         end={item.path === '/admin'} // Only trigger active for Admin Dashboard when on that exact page
+                         className={({ isActive }) => `
+                           flex items-center gap-3 px-5 py-3 text-sm font-bold transition-all relative
+                           ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'}
+                         `}
+                       >
+                         {({ isActive }) => (
+                           <>
+                             {isActive && <div className="absolute left-0 w-1 h-6 bg-indigo-600 rounded-r-full" />}
+                             <span className={isActive ? 'text-indigo-600' : 'text-slate-400'}>
+                               {React.cloneElement(item.icon, { size: 18 })}
+                             </span>
+                             {item.label}
+                           </>
+                         )}
+                       </NavLink>
+                     </React.Fragment>
+                   ))}
+                 </div>
              </div>
           )}
         </div>
