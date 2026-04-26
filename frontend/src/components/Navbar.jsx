@@ -104,6 +104,7 @@ const Navbar = () => {
         return [
           { path: '/admin', label: 'Admin Panel', icon: <LayoutDashboard size={18} /> },
           { path: '/ticket-list', label: 'Incidents', icon: <AlertCircle size={18} /> },
+          { path: '/users', label: 'User Management', icon: <Shield size={18} /> },
         ];
       case 'MANAGER':
         return [
@@ -137,6 +138,8 @@ const Navbar = () => {
           { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
           { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
           { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
+          {
+            path: "/users",label: "User Management",icon: <Shield size={18} />,},
         ];
       case "MANAGER":
         return [
