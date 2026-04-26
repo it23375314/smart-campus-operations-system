@@ -4,8 +4,8 @@ import { ArrowLeft, Upload, Save, Loader2, Image as ImageIcon, X } from 'lucide-
 import API from '../../services/api';
 import toast from 'react-hot-toast';
 
-const TYPES = ['room', 'lab', 'equipment'];
-const CATEGORIES = ['Auditorium', 'Laboratory', 'Equipment', 'Classroom', 'Sports', 'Other'];
+const TYPES = ['ROOM', 'HALL', 'PROJECTOR', 'CAMERA', 'INDOOR', 'OUTDOOR'];
+const CATEGORIES = ['Auditorium', 'Laboratory', 'Classroom', 'Sports', 'Equipment'];
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const STATUS_OPTIONS = ['ACTIVE', 'OUT_OF_SERVICE'];
 
@@ -157,134 +157,240 @@ const ResourceForm = () => {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <button
-        onClick={() => navigate('/admin/resources')}
-        className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-8 hover:text-indigo-600 transition-all group"
-      >
-        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-        Back to Asset Matrix
-      </button>
-
-      <div className="bg-white rounded-[3rem] border border-slate-200 shadow-2xl overflow-hidden glass-heavy">
-        <div className="p-10 border-b border-slate-50">
-          <h3 className="text-3xl font-prestige text-slate-900">
-            {isEdit ? 'Update Asset.' : 'Register Asset.'}
-          </h3>
-          <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-1">
-            Institutional Infrastructure Registry
-          </p>
+    <div className="max-w-6xl mx-auto pb-20">
+      {/* Sticky Action Header */}
+      <div className="sticky top-24 z-[30] bg-slate-50/80 backdrop-blur-md py-6 mb-8 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-6 px-2">
+        <div>
+          <button
+            onClick={() => navigate('/admin/resources')}
+            className="flex items-center gap-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 hover:text-indigo-600 transition-all group"
+          >
+            <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+            Back to Asset Matrix
+          </button>
+          <h2 className="text-4xl font-prestige text-slate-900">
+            {isEdit ? 'Asset Synchronization.' : 'New Resource Protocol.'}
+          </h2>
         </div>
+        
+        <div className="flex items-center gap-4">
+          <button 
+            type="button" 
+            onClick={() => navigate('/admin/resources')} 
+            className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-white hover:text-slate-600 transition-all border border-transparent hover:border-slate-200"
+          >
+            Discard
+          </button>
+          <button 
+            onClick={handleSubmit}
+            disabled={saving} 
+            className="inline-flex items-center gap-3 px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-2xl shadow-slate-900/10 disabled:opacity-50 active:scale-95 group"
+          >
+            {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+            {saving ? 'Processing...' : isEdit ? 'Update Registry' : 'Commit to Registry'}
+          </button>
+        </div>
+      </div>
 
-        <form onSubmit={handleSubmit} className="p-10 space-y-8">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        {/* Main Form Body */}
+        <div className="lg:col-span-2 space-y-8">
           {error && (
-            <div className="p-5 bg-rose-50 border border-rose-100 rounded-2xl text-xs font-bold text-rose-600 flex items-center gap-3">
-               <div className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-               {error}
+            <div className="p-6 bg-rose-50 border border-rose-100 rounded-3xl text-sm font-bold text-rose-600 flex items-start gap-4 shadow-sm animate-shake">
+               <AlertCircle size={20} className="flex-shrink-0" />
+               <div>
+                 <p className="font-black uppercase tracking-widest text-[10px] mb-1">Registry Exception Detected</p>
+                 {error}
+               </div>
             </div>
           )}
 
+          {/* Section: Core Identity */}
+          <section className="bg-white rounded-[3rem] border border-slate-200 shadow-xl p-10 space-y-8">
+            <div className="border-b border-slate-50 pb-6 mb-6">
+              <h4 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                  <Save size={16} />
+                </div>
+                Core Identity
+              </h4>
+            </div>
+
+            <div className="space-y-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Nomenclature *</label>
+                <input
+                  type="text"
+                  name="name"
+                  value={form.name}
+                  onChange={handleChange}
+                  placeholder="e.g. Grand Auditorium A1"
+                  required
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 outline-none transition-all shadow-inner"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Operational Description</label>
+                <textarea 
+                  name="description" 
+                  value={form.description} 
+                  onChange={handleChange} 
+                  rows={5} 
+                  placeholder="Provide a formal description of the facility's purpose and capabilities..."
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 outline-none transition-all resize-none shadow-inner" 
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Categorization & Location */}
+          <section className="bg-white rounded-[3rem] border border-slate-200 shadow-xl p-10 space-y-8">
+            <div className="border-b border-slate-50 pb-6 mb-6">
+              <h4 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center">
+                  <ImageIcon size={16} />
+                </div>
+                Classification & Spatial
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Functional Category *</label>
+                <select name="category" value={form.category} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white outline-none appearance-none cursor-pointer shadow-inner">
+                  <option value="">Select Category</option>
+                  {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Spatial Identity (Location) *</label>
+                <input 
+                  type="text" 
+                  name="location" 
+                  value={form.location} 
+                  onChange={handleChange} 
+                  placeholder="e.g. North Campus, Bldg 4"
+                  required 
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 outline-none transition-all shadow-inner" 
+                />
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Operational Capacity */}
+          <section className="bg-white rounded-[3rem] border border-slate-200 shadow-xl p-10 space-y-8">
+            <div className="border-b border-slate-50 pb-6 mb-6">
+              <h4 className="text-lg font-bold text-slate-900 flex items-center gap-3">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                  <Save size={16} />
+                </div>
+                Operational Thresholds
+              </h4>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Type *</label>
+                <select name="type" value={form.type} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white outline-none appearance-none cursor-pointer shadow-inner">
+                  <option value="">Select Type</option>
+                  {TYPES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Maximum Capacity (Persons)</label>
+                <input 
+                  type="number" 
+                  name="capacity" 
+                  value={form.capacity} 
+                  onChange={handleChange} 
+                  min="1" 
+                  className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl text-sm font-bold text-slate-900 focus:bg-white focus:border-indigo-400 outline-none transition-all shadow-inner" 
+                />
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Sidebar Controls */}
+        <div className="space-y-8">
+          {/* Status & Custodian Card */}
+          <div className="bg-slate-900 rounded-[3rem] p-8 text-white shadow-2xl">
+            <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8 border-b border-white/10 pb-4">Lifecycle Control</h4>
+            
+            <div className="space-y-8">
+              <div className="space-y-3">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Resource Status</label>
+                <div className="grid grid-cols-1 gap-2">
+                  {STATUS_OPTIONS.map(s => (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => setForm(prev => ({ ...prev, status: s }))}
+                      className={`px-6 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all text-left flex items-center justify-between ${
+                        form.status === s 
+                        ? 'bg-indigo-600 text-white shadow-lg' 
+                        : 'bg-white/5 text-slate-400 hover:bg-white/10'
+                      }`}
+                    >
+                      {s.replace('_', ' ')}
+                      {form.status === s && <div className="w-2 h-2 rounded-full bg-white animate-pulse" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <label className="text-[9px] font-black uppercase tracking-widest text-slate-500">Asset Custodian (Steward)</label>
+                <select 
+                  name="managerId" 
+                  value={form.managerId || ''} 
+                  onChange={handleChange} 
+                  className="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl text-xs font-bold text-white outline-none appearance-none cursor-pointer hover:bg-white/10 transition-all shadow-inner"
+                >
+                  <option value="" className="text-slate-900">Unassigned</option>
+                  {managers.map(m => <option key={m.id} value={m.id} className="text-slate-900">{m.username || m.name}</option>)}
+                </select>
+                <p className="text-[9px] text-slate-500 italic mt-2 px-1">Assigns final authority for booking approvals.</p>
+              </div>
+            </div>
+          </div>
+
           {/* Visualization synchronization */}
-          <div className="space-y-4">
-             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                <ImageIcon size={12} /> Asset Visualization
-             </label>
+          <div className="bg-white rounded-[3rem] border border-slate-200 shadow-xl p-8 space-y-6">
+             <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 pb-4">Graphical Reference</h4>
              
              <div className="relative group">
                {previewUrl ? (
-                 <div className="relative rounded-[2rem] overflow-hidden border border-slate-200 h-64 bg-slate-50">
+                 <div className="relative rounded-3xl overflow-hidden border border-slate-100 aspect-square bg-slate-50">
                    <img src={previewUrl} alt="Preview" className="w-full h-full object-cover" />
-                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                   <div className="absolute inset-0 bg-slate-900/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                      <button 
                         type="button"
                         onClick={handleRemovePreview}
-                        className="p-3 bg-white rounded-full text-rose-500 shadow-xl hover:scale-110 transition-transform"
+                        className="p-4 bg-white rounded-full text-rose-500 shadow-2xl hover:scale-110 transition-transform active:scale-95"
                      >
                         <X size={20} />
                      </button>
                    </div>
                  </div>
                ) : (
-                 <label className="flex flex-col items-center justify-center h-64 border-2 border-dashed border-slate-200 rounded-[2rem] bg-slate-50 hover:bg-white hover:border-indigo-300 transition-all cursor-pointer group">
-                    <Upload size={32} className="text-slate-300 group-hover:text-indigo-400 mb-4" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-600">Sync Graphical Reference</span>
+                 <label className="flex flex-col items-center justify-center aspect-square border-2 border-dashed border-slate-100 rounded-3xl bg-slate-50/50 hover:bg-white hover:border-indigo-200 transition-all cursor-pointer group shadow-inner">
+                    <div className="w-16 h-16 rounded-2xl bg-white shadow-sm flex items-center justify-center text-slate-300 group-hover:text-indigo-400 mb-4 transition-colors">
+                      <Upload size={24} />
+                    </div>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 group-hover:text-indigo-600">Sync Reference</span>
                     <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} />
                  </label>
                )}
              </div>
+             <p className="text-[9px] text-slate-400 text-center leading-relaxed">
+               Imagery should reflect institutional standards and clearly identify spatial boundaries.
+             </p>
           </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">
-              Resource Name <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={form.name}
-              onChange={handleChange}
-              required
-              className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type *</label>
-              <select name="type" value={form.type} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
-                <option value="">Select type</option>
-                {TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
-              <select name="status" value={form.status} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
-                {STATUS_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Category *</label>
-               <select name="category" value={form.category} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
-                 <option value="">Select category</option>
-                 {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
-               </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Location *</label>
-              <input type="text" name="location" value={form.location} onChange={handleChange} required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all" />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-6">
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Capacity</label>
-              <input type="number" name="capacity" value={form.capacity} onChange={handleChange} min="1" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Custodian</label>
-              <select name="managerId" value={form.managerId || ''} onChange={handleChange} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 outline-none appearance-none cursor-pointer">
-                <option value="">No manager assigned</option>
-                {managers.map(m => <option key={m.id} value={m.id}>{m.username || m.name}</option>)}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Description</label>
-            <textarea name="description" value={form.description} onChange={handleChange} rows={4} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl text-sm font-bold text-slate-900 focus:border-indigo-400 outline-none transition-all resize-none shadow-inner" />
-          </div>
-
-          <div className="flex items-center justify-end gap-4 pt-8 border-t border-slate-50">
-            <button type="button" onClick={() => navigate('/admin/resources')} className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-400 hover:bg-slate-50 transition-all">Cancel</button>
-            <button type="submit" disabled={saving} className="inline-flex items-center gap-3 px-10 py-5 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl disabled:opacity-50 active:scale-95 group">
-              {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-              {saving ? 'Processing...' : isEdit ? 'Update Registry' : 'Commit to Registry'}
-            </button>
-          </div>
-        </form>
+        </div>
       </div>
     </div>
   );

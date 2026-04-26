@@ -15,7 +15,8 @@ import {
   Activity,
   MoreHorizontal,
   Calendar,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import resourceService from '../services/resourceService';
@@ -89,8 +90,19 @@ const ResourcesPage = () => {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pt-40 pb-40 relative overflow-hidden bg-blueprint">
-      <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-[1px] pointer-events-none" />
+    <div className="bg-slate-50 min-h-screen pt-40 pb-32 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-slate-50/20 backdrop-blur-[1px] pointer-events-none" />
+      
+      {/* Vibrant Colorful Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/colorful-campus.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
       <div className="grain-overlay" />
       
       <div className="max-w-7xl mx-auto px-6 relative z-10">
@@ -207,9 +219,12 @@ const ResourcesPage = () => {
                       className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
                     >
                       <option value="">All Types</option>
-                      <option value="room">Institutional Room</option>
-                      <option value="lab">Research Laboratory</option>
-                      <option value="equipment">Specialized Equipment</option>
+                      <option value="ROOM">Institutional Room</option>
+                      <option value="HALL">Grand Hall / Venue</option>
+                      <option value="PROJECTOR">Digital Projector</option>
+                      <option value="CAMERA">Surveillance / Camera</option>
+                      <option value="INDOOR">Indoor Facility</option>
+                      <option value="OUTDOOR">Outdoor Ground</option>
                     </select>
 
                     <select 
@@ -323,16 +338,13 @@ const ResourcesPage = () => {
                           {resource.description || "High-specification academic facility designed for elite performance and research."}
                         </p>
                         
-                        <div className="mt-auto flex items-center justify-between">
+                        <div className="mt-auto text-center">
                            <button 
                              onClick={() => setSelectedResource(resource)}
-                             className="inline-flex items-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
+                             className="w-full inline-flex items-center justify-center gap-3 px-8 py-3.5 bg-slate-900 text-white rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl active:scale-95"
                            >
                               View Brief <ChevronRight size={12} />
                            </button>
-                           <div className="text-[10px] font-black text-slate-200 group-hover:text-indigo-600 transition-colors uppercase tracking-widest">
-                             {resource.id}
-                           </div>
                         </div>
                       </div>
                     </motion.div>
@@ -426,11 +438,11 @@ const ResourcesPage = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
-                      <Zap size={20} />
+                      <ShieldCheck size={20} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset ID</p>
-                      <p className="text-sm font-bold text-slate-900">{selectedResource.id}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset Custodian</p>
+                      <p className="text-sm font-bold text-slate-900">{selectedResource.managerName || "Institutional Office"}</p>
                     </div>
                   </div>
                 </div>

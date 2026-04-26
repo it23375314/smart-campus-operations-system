@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -28,13 +29,23 @@ const AdminBookingPage = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  const [searchParams] = useSearchParams();
+  
   // Advanced Filters State
   const [filters, setFilters] = useState({
-    status: '',
+    status: searchParams.get('status') || '',
     date: '',
     resourceId: '',
     search: ''
   });
+
+  // Sync filters with URL params when they change (e.g. via Navbar)
+  useEffect(() => {
+    const statusFromUrl = searchParams.get('status') || '';
+    if (statusFromUrl !== filters.status) {
+      setFilters(prev => ({ ...prev, status: statusFromUrl }));
+    }
+  }, [searchParams]);
 
   const [rejectionModal, setRejectionModal] = useState({ isOpen: false, bookingId: null });
   const [selectedBooking, setSelectedBooking] = useState(null);
@@ -301,125 +312,129 @@ const AdminBookingPage = () => {
             <p className="text-slate-400 font-black uppercase tracking-[0.4em] text-[10px]">No synchronization requests found in this cross-section</p>
           </motion.div>
         ) : (
-          <div className="grid grid-cols-1 gap-8 relative">
-            {loading && (
-               <div className="absolute inset-0 bg-white/20 backdrop-blur-[1px] z-20 flex items-center justify-center rounded-[3rem]">
-                  <RefreshCw size={24} className="text-indigo-600 animate-spin" />
-               </div>
-            )}
-            <AnimatePresence>
+          <div className="space-y-6">
+            <AnimatePresence mode="popLayout">
               {bookings.map((booking, idx) => (
                 <motion.div
                   key={booking.id}
-                  initial={{ opacity: 0, y: 30 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ delay: idx * 0.05 }}
-                  className="glass-heavy bg-white/70 p-10 rounded-[3.5rem] border border-white shadow-2xl flex flex-col xl:flex-row items-center justify-between gap-12 hover:border-indigo-100 transition-all group"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, scale: 0.98 }}
+                  transition={{ delay: idx * 0.03 }}
+                  className="bg-white rounded-[2rem] border border-slate-200 shadow-xl overflow-hidden hover:border-indigo-200 transition-all group"
                 >
-                  <div className="flex flex-col md:flex-row items-center gap-12 flex-1 w-full">
-                    {/* Status Circle */}
-                    <div className={`w-24 h-24 rounded-full border-4 flex items-center justify-center shadow-inner transition-colors flex-shrink-0
-                      ${booking.status === 'APPROVED' ? 'bg-emerald-50 border-emerald-100 text-emerald-500 shadow-emerald-500/5' : 
-                        booking.status === 'REJECTED' ? 'bg-rose-50 border-rose-100 text-rose-500 shadow-rose-500/5' :
-                        booking.status === 'PENDING' ? 'bg-amber-50 border-amber-100 text-amber-500 shadow-amber-500/5' :
-                        'bg-slate-50 border-slate-100 text-slate-300 shadow-slate-500/5'}
-                    `}>
-                      {booking.status === 'APPROVED' ? <CheckCircle2 size={40} /> : 
-                       booking.status === 'REJECTED' ? <XCircle size={40} /> :
-                       <Clock size={40} />}
-                    </div>
+                  <div className="flex flex-col lg:flex-row lg:items-stretch">
+                    {/* Status Bar Indicator */}
+                    <div className={`w-2 lg:w-3 flex-shrink-0 ${
+                      booking.status === 'APPROVED' ? 'bg-emerald-500' : 
+                      booking.status === 'REJECTED' ? 'bg-rose-500' :
+                      booking.status === 'PENDING' ? 'bg-amber-500' : 'bg-slate-300'
+                    }`} />
 
-                    <div className="space-y-5 text-center md:text-left flex-1">
-                      <div className="flex items-center flex-wrap gap-4 justify-center md:justify-start">
-                        <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-600 bg-indigo-50 px-5 py-2 rounded-full border border-indigo-100 shadow-sm">
-                          REGISTRY ID: {booking.id.slice(-8)}
-                        </span>
-                        <div className={`px-5 py-2 rounded-full border text-[10px] font-black uppercase tracking-[0.2em] shadow-sm ${getStatusStyle(booking.status)}`}>
-                          {booking.status}
+                    <div className="flex-1 p-8 flex flex-col md:flex-row md:items-center justify-between gap-10">
+                      <div className="flex-1 space-y-6">
+                        <div className="flex items-center flex-wrap gap-3">
+                          <span className="px-3 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest rounded-md">
+                            Ref: {booking.id.slice(-8).toUpperCase()}
+                          </span>
+                          <span className={`px-4 py-1 rounded-full border text-[9px] font-black uppercase tracking-widest shadow-sm ${getStatusStyle(booking.status)}`}>
+                            {booking.status}
+                          </span>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1.5 ml-auto md:ml-0">
+                            <Clock size={12} /> Received: {new Date(booking.startTime).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        <h3 className="text-2xl font-bold text-slate-900 leading-tight group-hover:text-indigo-600 transition-colors">
+                          {booking.purpose}
+                        </h3>
+
+                        {/* Structured Metadata - Fixed Overlaps */}
+                        <div className="flex flex-wrap items-center gap-y-4 gap-x-10 pt-4 border-t border-slate-50">
+                           <div className="space-y-1">
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Requesting Identity</p>
+                             <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                               <div className="w-6 h-6 rounded-lg bg-slate-100 flex items-center justify-center text-slate-400"><User size={12} /></div>
+                               {booking.userName || booking.userId}
+                             </div>
+                           </div>
+
+                           <div className="space-y-1">
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Asset Target</p>
+                             <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                               <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-400 flex items-center justify-center"><Package size={12} /></div>
+                               {booking.resourceName || `Asset #${booking.resourceId.slice(-6).toUpperCase()}`}
+                             </div>
+                           </div>
+
+                           <div className="space-y-1">
+                             <p className="text-[9px] font-black text-slate-400 uppercase tracking-[0.2em]">Operational Window</p>
+                             <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                               <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-400 flex items-center justify-center"><Calendar size={12} /></div>
+                               {new Date(booking.startTime).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}
+                             </div>
+                           </div>
+                           
+                           <button 
+                              onClick={() => openDetails(booking)}
+                              className="md:ml-auto flex items-center gap-2 px-5 py-2.5 bg-slate-50 hover:bg-indigo-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest text-slate-400 transition-all active:scale-95"
+                           >
+                              <Eye size={14} /> Full Dossier
+                           </button>
                         </div>
                       </div>
-                      
-                      <h3 className="text-4xl font-prestige text-slate-900 leading-tight">
-                        {booking.purpose}
-                      </h3>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                         <div className="flex items-center gap-4 text-slate-500 font-bold text-xs uppercase tracking-widest">
-                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-                               <User size={16} />
+                      {/* Control Panel */}
+                      <div className="w-full md:w-64 flex-shrink-0">
+                        <AnimatePresence mode="wait">
+                          {booking.status === 'PENDING' ? (
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.9 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              className="flex flex-col gap-3"
+                            >
+                              <button
+                                onClick={() => handleApprove(booking.id)}
+                                className="w-full py-4 bg-slate-900 text-white rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all shadow-xl shadow-slate-900/10"
+                              >
+                                Authorize Request
+                              </button>
+                              <button
+                                onClick={() => setRejectionModal({ isOpen: true, bookingId: booking.id })}
+                                className="w-full py-4 bg-white text-rose-500 border border-rose-100 rounded-2xl font-black text-[10px] uppercase tracking-widest hover:bg-rose-50 transition-all"
+                              >
+                                Decline Provision
+                              </button>
+                            </motion.div>
+                          ) : booking.status === 'APPROVED' ? (
+                            <motion.div 
+                              initial={{ opacity: 0, y: 10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              className="space-y-3"
+                            >
+                              <div className="px-6 py-4 bg-emerald-50 text-emerald-600 rounded-2xl border border-emerald-100 flex items-center justify-center gap-3">
+                                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Active Sync</span>
+                              </div>
+                              <button
+                                onClick={() => handleAdminCancel(booking.id)}
+                                className="w-full py-3 text-slate-400 hover:text-rose-500 text-[9px] font-black uppercase tracking-[0.2em] transition-colors"
+                              >
+                                Force Override
+                              </button>
+                            </motion.div>
+                          ) : booking.status === 'REJECTED' ? (
+                            <div className="p-6 bg-rose-50/50 rounded-2xl border border-rose-100 italic text-[11px] text-rose-800 font-medium leading-relaxed line-clamp-3">
+                              "{booking.rejectionReason}"
                             </div>
-                            {booking.userId}
-                         </div>
-                         <div className="flex items-center gap-4 text-slate-500 font-bold text-xs uppercase tracking-widest">
-                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-                               <Building2 size={16} />
+                          ) : (
+                            <div className="text-center opacity-30 grayscale">
+                              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-400">Operation Terminated</span>
                             </div>
-                            Asset #{booking.resourceId}
-                         </div>
-                         <div className="flex items-center gap-4 text-slate-500 font-bold text-xs uppercase tracking-widest">
-                            <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center text-slate-300">
-                               <Calendar size={16} />
-                            </div>
-                            {new Date(booking.startTime).toLocaleDateString([], { month: 'short', day: 'numeric' })}
-                         </div>
-                         <button 
-                            onClick={() => openDetails(booking)}
-                            className="flex items-center gap-4 text-indigo-600 hover:text-slate-900 font-black text-xs uppercase tracking-[0.2em] transition-all"
-                         >
-                            <Eye size={18} /> Interrogate Record
-                         </button>
+                          )}
+                        </AnimatePresence>
                       </div>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-4 w-full xl:w-auto xl:justify-end">
-                    {booking.status === 'PENDING' && (
-                      <div className="flex flex-col sm:flex-row gap-4 w-full">
-                        <button
-                          onClick={() => setRejectionModal({ isOpen: true, bookingId: booking.id })}
-                          className="flex-1 px-8 py-5 text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-[2.5rem] transition-all font-black text-[11px] uppercase tracking-[0.2em] bg-white hover:shadow-xl shadow-slate-200/40 active:scale-[0.98]"
-                        >
-                          Decline Request
-                        </button>
-                        <button
-                          onClick={() => handleApprove(booking.id)}
-                          className="flex-1 px-10 py-5 bg-slate-900 text-white rounded-[2.5rem] transition-all font-black text-[11px] uppercase tracking-[0.2em] shadow-2xl shadow-slate-900/10 hover:bg-emerald-600 hover:shadow-emerald-200 active:scale-[0.98]"
-                        >
-                          Approve Provision
-                        </button>
-                      </div>
-                    )}
-                    {booking.status === 'REJECTED' && (
-                      <div className="p-8 bg-rose-50/50 rounded-[2.5rem] border border-rose-100 w-full xl:max-w-xs text-left shadow-inner">
-                        <p className="text-[10px] font-black uppercase text-rose-400 tracking-widest mb-3 flex items-center gap-2">
-                           Rejection Rationale
-                        </p>
-                        <p className="text-xs text-rose-800 font-bold italic line-clamp-3 leading-relaxed">
-                          "{booking.rejectionReason}"
-                        </p>
-                      </div>
-                    )}
-                    {booking.status === 'APPROVED' && (
-                      <div className="flex flex-col gap-4 w-full">
-                          <div className="p-6 bg-emerald-50/50 rounded-[2.5rem] border border-emerald-100 shadow-inner flex items-center justify-center gap-4">
-                             <div className="w-3 h-3 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_10px_rgba(52,211,153,0.8)]" />
-                             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-emerald-600">Active Reservation</span>
-                          </div>
-                          <button
-                            onClick={() => handleAdminCancel(booking.id)}
-                            className="w-full px-8 py-4 bg-white text-slate-500 hover:text-rose-600 border border-slate-200 hover:border-rose-200 rounded-[2.5rem] transition-all font-black text-[10px] uppercase tracking-[0.3em] shadow-md hover:shadow-xl active:scale-[0.98]"
-                          >
-                            Forced Override
-                          </button>
-                      </div>
-                    )}
-                    {booking.status === 'CANCELLED' && (
-                        <div className="p-10 bg-slate-50 rounded-[2.5rem] border border-slate-200 shadow-inner flex items-center justify-center gap-4 opacity-50 grayscale w-full">
-                          <XCircle size={24} className="text-slate-400" />
-                          <span className="text-[11px] font-black uppercase tracking-[0.3em] text-slate-500">Operation Terminated</span>
-                        </div>
-                    )}
                   </div>
                 </motion.div>
               ))}

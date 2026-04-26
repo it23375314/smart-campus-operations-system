@@ -97,9 +97,19 @@ const AvailabilityPage = () => {
   };
 
   return (
-    <div className="bg-slate-50 min-h-screen pt-40 pb-32 px-6 relative bg-blueprint">
-      <div className="absolute inset-0 bg-slate-50/90 backdrop-blur-[2px] pointer-events-none" />
-      <div className="grain-overlay" />
+    <div className="bg-slate-50 min-h-screen pt-40 pb-32 px-6 relative overflow-hidden">
+      <div className="absolute inset-0 bg-slate-50/20 backdrop-blur-[1px] pointer-events-none" />
+      
+      {/* Vibrant Lab Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-[0.15] pointer-events-none"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/colorful-lab.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
       
       <div className="max-w-6xl mx-auto relative z-10">
         {/* Header Section */}
