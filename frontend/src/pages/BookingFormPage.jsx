@@ -93,6 +93,43 @@ const BookingFormPage = () => {
       }
     }
 
+    // 1. Resource Specific Validations
+    if (resourceInfo) {
+      // Capacity check
+      if (formData.attendees > resourceInfo.capacity) {
+        errors.attendees = `Capacity Violation: Max capacity for this asset is ${resourceInfo.capacity}.`;
+      }
+
+      // Operating Hours check
+      if (resourceInfo.availableTimes) {
+        const { start, end } = resourceInfo.availableTimes;
+        if (formData.startTime && formData.startTime < start) {
+          errors.startTime = `Operational Bound: Resource opens at ${start}.`;
+        }
+        if (formData.endTime && formData.endTime > end) {
+          errors.endTime = `Operational Bound: Resource closes at ${end}.`;
+        }
+      }
+    }
+
+    // 2. Overlap Check with Availability Slots
+    if (formData.startTime && formData.endTime && availabilitySlots.length > 0) {
+      const startMinutes = timeToMinutes(formData.startTime);
+      const endMinutes = timeToMinutes(formData.endTime);
+
+      const hasConflict = availabilitySlots.some(slot => {
+        if (slot.status !== 'BOOKED') return false;
+        const slotStart = timeToMinutes(slot.startTime);
+        const slotEnd = timeToMinutes(slot.endTime);
+        // Overlap condition: start < slotEnd && end > slotStart
+        return startMinutes < slotEnd && endMinutes > slotStart;
+      });
+
+      if (hasConflict) {
+        errors.startTime = "Temporal Conflict: Selected range overlaps with existing synchronization.";
+      }
+    }
+
     if (!formData.purpose || formData.purpose.trim().length < 5) {
       errors.purpose = "Comprehensive justification (minimum 5 characters) is required.";
     }
@@ -102,6 +139,11 @@ const BookingFormPage = () => {
     }
 
     return errors;
+  };
+
+  const timeToMinutes = (timeStr) => {
+    const [h, m] = timeStr.split(':').map(Number);
+    return h * 60 + m;
   };
 
   const handleSubmit = async (e) => {
@@ -228,6 +270,18 @@ const BookingFormPage = () => {
                     ))}
                   </select>
                 </div>
+                {resourceInfo && (
+                  <div className="flex flex-wrap gap-4 mt-2 px-2">
+                    <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/50">
+                      <Users size={12} className="text-indigo-500" /> Max Capacity: {resourceInfo.capacity}
+                    </div>
+                    {resourceInfo.availableTimes && (
+                      <div className="flex items-center gap-2 text-[9px] font-black text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1.5 rounded-lg border border-slate-200/50">
+                        <Clock size={12} className="text-sky-500" /> Operating Hours: {resourceInfo.availableTimes.start} — {resourceInfo.availableTimes.end}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Date */}
@@ -240,6 +294,7 @@ const BookingFormPage = () => {
                   <Calendar className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.bookingDate ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
                   <input
                     type="date"
+                    min={new Date().toISOString().split('T')[0]}
                     className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-2xl font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner
                       ${fieldErrors.bookingDate ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
                     `}
