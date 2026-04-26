@@ -37,14 +37,14 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
 
         User user;
         if (existingUser.isEmpty()) {
-            user = new User();
-            user.setEmail(email);
-            user.setName(name);
-            user.setPassword("OAUTH_USER");
-            user.setRole(Role.USER);
-            user.setActive(true);
-            user.setCreatedAt(LocalDateTime.now());
-            userRepository.save(user);
+            User newUser = new User();
+            newUser.setEmail(email);
+            newUser.setName(name != null ? name : email);
+            newUser.setPassword("OAUTH_USER");
+            newUser.setRole(Role.USER);
+            newUser.setActive(true);
+            newUser.setCreatedAt(LocalDateTime.now());
+            user = userRepository.save(newUser); // ✅ capture saved user with ID
         } else {
             user = existingUser.get();
         }
@@ -52,12 +52,19 @@ public class OAuth2SuccessHandler extends SimpleUrlAuthenticationSuccessHandler 
         // Generate JWT token
         String token = jwtUtil.generateToken(user.getEmail(), user.getRole().name());
 
+        // Encode name safely for URL
+        String encodedName = java.net.URLEncoder.encode(
+            user.getName() != null ? user.getName() : email,
+            "UTF-8"
+        );
+
         // Redirect to frontend with token
-        String redirectUrl = "http://localhost:5173/oauth-success?token=" + token
-                + "&name=" + user.getName()
+        String redirectUrl = "http://localhost:5173/oauth-success"
+                + "?token=" + token
+                + "&name=" + encodedName
                 + "&email=" + user.getEmail()
                 + "&role=" + user.getRole().name()
-                + "&id=" + user.getId();
+                + "&id=" + (user.getId() != null ? user.getId() : "");
 
         response.sendRedirect(redirectUrl);
     }
