@@ -15,7 +15,8 @@ import {
   Activity,
   MoreHorizontal,
   Calendar,
-  Clock
+  Clock,
+  ShieldCheck
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import resourceService from '../services/resourceService';
@@ -218,9 +219,12 @@ const ResourcesPage = () => {
                       className="bg-white px-6 py-3.5 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-900 border border-slate-200 outline-none hover:border-indigo-200 transition-all cursor-pointer shadow-sm"
                     >
                       <option value="">All Types</option>
-                      <option value="room">Institutional Room</option>
-                      <option value="lab">Research Laboratory</option>
-                      <option value="equipment">Specialized Equipment</option>
+                      <option value="ROOM">Institutional Room</option>
+                      <option value="HALL">Grand Hall / Venue</option>
+                      <option value="PROJECTOR">Digital Projector</option>
+                      <option value="CAMERA">Surveillance / Camera</option>
+                      <option value="INDOOR">Indoor Facility</option>
+                      <option value="OUTDOOR">Outdoor Ground</option>
                     </select>
 
                     <select 
@@ -434,11 +438,11 @@ const ResourcesPage = () => {
                   </div>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
-                      <Zap size={20} />
+                      <ShieldCheck size={20} />
                     </div>
                     <div>
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset ID</p>
-                      <p className="text-sm font-bold text-slate-900">{selectedResource.id}</p>
+                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Asset Custodian</p>
+                      <p className="text-sm font-bold text-slate-900">{selectedResource.managerName || "Institutional Office"}</p>
                     </div>
                   </div>
                 </div>

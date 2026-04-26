@@ -112,6 +112,12 @@ const ResourceList = () => {
           <h2 className="text-3xl font-prestige text-slate-900 mb-1">Asset Control Matrix.</h2>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Global Resource Lifecycle Management</p>
         </div>
+        <Link
+          to="/admin/resources/add"
+          className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+        >
+          <Plus size={16} /> Register New Asset
+        </Link>
 
       </div>
 
