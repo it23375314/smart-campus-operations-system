@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
   CheckCircle2, 
   XCircle, 
@@ -28,9 +29,12 @@ const AdminBookingPage = () => {
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  const [searchParams] = useSearchParams();
+  const initialStatus = searchParams.get('status') || '';
+
   // Advanced Filters State
   const [filters, setFilters] = useState({
-    status: '',
+    status: initialStatus,
     date: '',
     resourceId: '',
     search: ''

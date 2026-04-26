@@ -132,8 +132,8 @@ const Navbar = () => {
       case "ADMIN":
         return [
           { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
-          { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
-          { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+          { path: '/admin/bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+          { path: '/admin/bookings?status=PENDING', label: 'Manage Requests', icon: <Inbox size={18} /> },
         ];
       case "MANAGER":
         return [
