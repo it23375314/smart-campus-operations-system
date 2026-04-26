@@ -84,19 +84,23 @@ const Navbar = () => {
 
     switch (user.role) {
       case "ADMIN":
-        // ✅ 4. ADMIN Navbar
-        return [
-          {
+    return [
+        {
             path: "/admin",
             label: "Admin Dashboard",
             icon: <LayoutDashboard size={18} />,
-          },
-          {
+        },
+        {
             path: "/my-bookings",
             label: "All Bookings",
             icon: <ListChecks size={18} />,
-          },
-        ];
+        },
+        {
+            path: "/users",
+            label: "User Management",
+            icon: <Shield size={18} />,
+        },
+    ];
       case "MANAGER":
         // ✅ 5. MANAGER Navbar
         return [
