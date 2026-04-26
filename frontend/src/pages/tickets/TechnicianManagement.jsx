@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import API from '../../services/api';
+import toast from 'react-hot-toast';
 
 const CATEGORY_COLORS = {
   'IT Support':  'bg-indigo-100 text-indigo-700 border-indigo-200',
@@ -20,6 +21,7 @@ const TechnicianManagement = () => {
   const [submitting, setSubmitting] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [category, setCategory] = useState('IT Support');
   const [searchTerm, setSearchTerm] = useState('');
   const [activeFilter, setActiveFilter] = useState('ALL');
@@ -41,11 +43,21 @@ const TechnicianManagement = () => {
     e.preventDefault();
     setSubmitting(true);
     try {
+      await API.post('/auth/admin/create-user?role=TECHNICIAN', {
+        name,
+        email,
+        password,
+      });
       await API.post('/technicians', { name, email, category });
-      setName(''); setEmail(''); setCategory('IT Support');
+      setName('');
+      setEmail('');
+      setPassword('');
+      setCategory('IT Support');
+      toast.success('Technician account created. They can now log in as TECHNICIAN.');
       fetchTechnicians();
     } catch (error) {
       console.error('Error adding technician:', error);
+      toast.error(error?.response?.data?.error || 'Failed to add technician.');
     } finally {
       setSubmitting(false);
     }
@@ -131,6 +143,19 @@ const TechnicianManagement = () => {
                 placeholder="tech@campus.edu"
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
               />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Login Password</label>
+              <input
+                type="password"
+                required
+                minLength={6}
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder="At least 6 characters"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              />
+              <p className="text-[11px] text-slate-400 font-medium">Share this password securely with the technician.</p>
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-black text-slate-500 uppercase tracking-widest">Category</label>
