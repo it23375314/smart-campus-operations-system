@@ -105,6 +105,8 @@ const UserManagement = () => {
         return "bg-red-100 text-red-700";
       case "TECHNICIAN":
         return "bg-yellow-100 text-yellow-700";
+      case "MANAGER":
+        return "bg-purple-100 text-purple-700";
       default:
         return "bg-green-100 text-green-700";
     }
@@ -302,6 +304,7 @@ const UserManagement = () => {
                           <option value="USER">USER</option>
                           <option value="ADMIN">ADMIN</option>
                           <option value="TECHNICIAN">TECHNICIAN</option>
+                          <option value="MANAGER">MANAGER</option>
                         </select>
                         {user.active && (
                           <button
