@@ -30,15 +30,22 @@ const AdminBookingPage = () => {
   const [loading, setLoading] = useState(true);
   
   const [searchParams] = useSearchParams();
-  const initialStatus = searchParams.get('status') || '';
-
+  
   // Advanced Filters State
   const [filters, setFilters] = useState({
-    status: initialStatus,
+    status: searchParams.get('status') || '',
     date: '',
     resourceId: '',
     search: ''
   });
+
+  // Sync filters with URL params when they change (e.g. via Navbar)
+  useEffect(() => {
+    const statusFromUrl = searchParams.get('status') || '';
+    if (statusFromUrl !== filters.status) {
+      setFilters(prev => ({ ...prev, status: statusFromUrl }));
+    }
+  }, [searchParams]);
 
   const [rejectionModal, setRejectionModal] = useState({ isOpen: false, bookingId: null });
   const [selectedBooking, setSelectedBooking] = useState(null);
