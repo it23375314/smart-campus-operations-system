@@ -364,7 +364,7 @@ public class MongoBookingService implements BookingService {
 
     private BookingResponseDTO mapToDTO(Booking booking) {
         String userName = userRepository.findById(booking.getUserId())
-                .map(u -> u.getName() != null ? u.getName() : u.getUsername())
+            .map(u -> u.getName() != null ? u.getName() : u.getEmail())
                 .orElse("Unknown User");
         
         String resourceName = resourceRepository.findById(booking.getResourceId())
