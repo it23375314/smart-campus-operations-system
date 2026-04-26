@@ -21,7 +21,7 @@ public class FileUploadController {
     private final String UPLOAD_DIR = "uploads/";
 
     @PostMapping("/upload-image")
-    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file) {
+    public ResponseEntity<Map<String, String>> uploadImage(@RequestParam("file") MultipartFile file, jakarta.servlet.http.HttpServletRequest request) {
         if (file.isEmpty()) {
             return ResponseEntity.badRequest().build();
         }
@@ -45,8 +45,9 @@ public class FileUploadController {
             // Save file
             Files.copy(file.getInputStream(), filePath);
 
-            // Return URL
-            String fileUrl = "http://localhost:8080/uploads/" + filename;
+            // Return URL dynamically
+            String baseUrl = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort();
+            String fileUrl = baseUrl + "/uploads/" + filename;
             Map<String, String> response = new HashMap<>();
             response.put("imageUrl", fileUrl);
 

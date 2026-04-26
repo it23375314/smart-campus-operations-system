@@ -103,8 +103,6 @@ const Navbar = () => {
     switch (user.role) {
       case 'ADMIN':
         return [
-          { path: '/admin', label: 'Admin Panel', icon: <LayoutDashboard size={18} /> },
-          { path: '/ticket-list', label: 'Incidents', icon: <AlertCircle size={18} /> },
           { path: '/users', label: 'User Management', icon: <Shield size={18} /> },
           { path: '/admin', label: 'Resource Management', icon: <LayoutDashboard size={18} /> },
           { path: '/ticket-list', label: 'Incident Management', icon: <AlertCircle size={18} /> },
@@ -136,12 +134,6 @@ const Navbar = () => {
       case "ADMIN":
         return [
           { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
-          { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
-          { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
-          { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
-          { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
-          {
-            path: "/users",label: "User Management",icon: <Shield size={18} />,},
           { path: '/admin/bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
           { path: '/admin/bookings?status=PENDING', label: 'Manage Requests', icon: <Inbox size={18} /> },
         ];
@@ -215,7 +207,7 @@ const Navbar = () => {
              <div className="relative group/mgmt">
                 <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[12px] text-slate-500 hover:text-indigo-700 hover:bg-white/40 transition-all uppercase tracking-tighter">
                   <Command size={16} className="text-indigo-500" />
-                  Management
+                  Booking Management
                   <ChevronDown size={12} className="group-hover/mgmt:rotate-180 transition-transform ml-1" />
                 </button>
                 

@@ -19,6 +19,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import API from '../../services/api';
 import toast from 'react-hot-toast';
 import { motion } from 'framer-motion';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 const TYPES = ['All', 'room', 'lab', 'equipment'];
 
@@ -88,6 +90,50 @@ const ResourceList = () => {
     }
   };
 
+  const downloadPDF = () => {
+    const doc = new jsPDF();
+    const tableColumn = ["Asset Name", "Category", "Type", "Location", "Capacity", "Status"];
+    const tableRows = [];
+
+    resources.forEach(resource => {
+      const resourceData = [
+        resource.name,
+        resource.category,
+        resource.type,
+        resource.location || 'N/A',
+        resource.capacity.toString(),
+        resource.status
+      ];
+      tableRows.push(resourceData);
+    });
+
+    // Add Institutional Header
+    doc.setFontSize(22);
+    doc.setTextColor(15, 23, 42); // slate-900
+    doc.text("SmartCampus Operations Center", 14, 22);
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139); // slate-400
+    doc.text("GLOBAL ASSET REGISTRY REPORT", 14, 30);
+    doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 35);
+    
+    // Line separator
+    doc.setDrawColor(226, 232, 240); // slate-200
+    doc.line(14, 40, 196, 40);
+
+    autoTable(doc, {
+      head: [tableColumn],
+      body: tableRows,
+      startY: 45,
+      styles: { fontSize: 9, font: 'helvetica' },
+      headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { top: 45 },
+    });
+
+    doc.save(`Asset_Registry_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast.success("Registry report generated successfully.");
+  };
+
   const filtered = resources.filter(r => {
     const matchesSearch = r.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
                          (r.location && r.location.toLowerCase().includes(searchTerm.toLowerCase()));
@@ -112,12 +158,20 @@ const ResourceList = () => {
           <h2 className="text-3xl font-prestige text-slate-900 mb-1">Asset Control Matrix.</h2>
           <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Global Resource Lifecycle Management</p>
         </div>
-        <Link
-          to="/admin/resources/add"
-          className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
-        >
-          <Plus size={16} /> Register New Asset
-        </Link>
+        <div className="flex items-center gap-4">
+          <button
+            onClick={downloadPDF}
+            className="inline-flex items-center gap-3 px-8 py-4 bg-white text-slate-900 rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-slate-50 transition-all border border-slate-200 shadow-sm active:scale-95"
+          >
+            <Package size={16} className="text-indigo-600" /> Download Registry Report
+          </button>
+          <Link
+            to="/admin/resources/add"
+            className="inline-flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black text-[11px] uppercase tracking-widest hover:bg-indigo-600 transition-all shadow-xl shadow-slate-900/10 active:scale-95"
+          >
+            <Plus size={16} /> Register New Asset
+          </Link>
+        </div>
 
       </div>
 
