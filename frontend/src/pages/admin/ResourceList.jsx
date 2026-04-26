@@ -118,6 +118,7 @@ const ResourceList = () => {
         >
           <Plus size={16} /> Register New Asset
         </Link>
+
       </div>
 
       {/* Filters Hub */}

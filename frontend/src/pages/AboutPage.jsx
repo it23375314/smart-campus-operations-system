@@ -4,7 +4,18 @@ import { Building2, Microscope, Users, Globe, ArrowRight, ShieldCheck, Mail, Pho
 
 const AboutPage = () => {
   return (
-    <div className="bg-white min-h-screen pt-40 pb-20">
+    <div className="bg-slate-50 min-h-screen pt-40 pb-20 relative overflow-hidden">
+      {/* Vibrant Interior Background Overlay */}
+      <div 
+        className="absolute inset-0 z-0 opacity-10 pointer-events-none"
+        style={{ 
+          backgroundImage: 'url("/backgrounds/colorful-interior.png")',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundAttachment: 'fixed'
+        }}
+      />
+      <div className="absolute inset-0 bg-slate-50/20 backdrop-blur-[1px] pointer-events-none" />
       <div className="max-w-7xl mx-auto px-6">
         {/* Institutional Hero */}
         <div className="grid lg:grid-cols-2 gap-20 items-center mb-40">

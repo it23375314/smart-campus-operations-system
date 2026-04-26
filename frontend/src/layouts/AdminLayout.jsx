@@ -14,40 +14,12 @@ import {
 const AdminLayout = () => {
   const location = useLocation();
 
-  // Derive breadcrumb label from path
-  const getBreadcrumb = () => {
-    if (location.pathname.includes('/resources/add')) return 'Add Resource';
-    if (location.pathname.includes('/resources/edit')) return 'Edit Resource';
-    if (location.pathname.includes('/resources/view')) return 'Resource Details';
-    if (location.pathname.includes('/resources')) return 'Resources';
-    return 'Dashboard';
-  };
-
   return (
     <div className="flex min-h-screen bg-slate-50">
 
       {/* Main Content */}
-      <main className="flex-1 min-h-screen pt-32 max-w-7xl mx-auto w-full">
+      <main className="flex-1 min-h-screen pt-24 max-w-7xl mx-auto w-full">
 
-        {/* Top header bar */}
-        <header className="sticky top-32 z-10 bg-white/80 backdrop-blur-md border-b border-slate-200 px-8 py-4 flex justify-between items-center rounded-2xl mx-4 mt-4 shadow-sm">
-          <div>
-            <nav className="flex items-center gap-1.5 text-xs font-medium text-slate-400 mb-0.5">
-              <Link to="/admin" className="hover:text-slate-600 transition-colors">Admin</Link>
-              <ChevronRight size={12} />
-              <span className="text-slate-700">{getBreadcrumb()}</span>
-            </nav>
-            <h2 className="text-xl font-bold text-slate-900">{getBreadcrumb()}</h2>
-          </div>
-          <Link
-            to="/admin/resources/add"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold text-white transition-all duration-200 shadow-md shadow-indigo-500/20 hover:shadow-indigo-500/40 hover:-translate-y-0.5"
-            style={{ background: 'linear-gradient(135deg, #4f46e5, #6d28d9)' }}
-          >
-            <PlusCircle size={17} />
-            Add Resource
-          </Link>
-        </header>
 
         {/* Page content */}
         <div className="p-8">

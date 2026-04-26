@@ -22,6 +22,8 @@ public class BookingResponseDTO {
     private int attendees;
     private BookingStatus status;
     private String rejectionReason;
+    private String userName;
+    private String resourceName;
     private LocalDateTime createdAt;
 
     public BookingStatus getStatus() {
