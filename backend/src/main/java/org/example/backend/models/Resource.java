@@ -40,4 +40,8 @@ public class Resource {
     private Map<String, String> availableTimes; // e.g. "start": "09:00", "end": "17:00"
 
     private ResourceStatus status;
+
+    private String managerId;
+
+    private String managerName;
 }

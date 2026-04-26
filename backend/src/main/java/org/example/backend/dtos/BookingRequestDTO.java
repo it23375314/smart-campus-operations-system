@@ -15,10 +15,10 @@ import java.time.LocalDateTime;
 public class BookingRequestDTO {
 
     @NotNull(message = "User ID is required")
-    private Long userId;
+    private String userId;
 
     @NotNull(message = "Resource ID is required")
-    private Long resourceId;
+    private String resourceId;
 
     @NotNull(message = "Start time is required")
     @Future(message = "Start time must be in the future")

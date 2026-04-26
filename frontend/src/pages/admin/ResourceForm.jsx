@@ -26,11 +26,22 @@ const ResourceForm = () => {
   const isEdit = Boolean(id);
 
   const [form, setForm] = useState(initialForm);
+  const [managers, setManagers] = useState([]);
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   useEffect(() => {
+    const fetchManagers = async () => {
+      try {
+        const res = await axios.get('http://localhost:8085/api/users/managers');
+        setManagers(res.data);
+      } catch (err) {
+        console.error('Failed to fetch managers:', err);
+      }
+    };
+    fetchManagers();
+
     if (!isEdit) return;
     const fetchResource = async () => {
       try {
@@ -52,7 +63,16 @@ const ResourceForm = () => {
 
   const handleChange = e => {
     const { name, value } = e.target;
-    setForm(prev => ({ ...prev, [name]: value }));
+    if (name === 'managerId') {
+      const selectedManager = managers.find(m => m.id === value);
+      setForm(prev => ({ 
+        ...prev, 
+        managerId: value, 
+        managerName: selectedManager ? selectedManager.username : '' 
+      }));
+    } else {
+      setForm(prev => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleDayToggle = day => {
@@ -175,20 +195,36 @@ const ResourceForm = () => {
             </div>
           </div>
 
-          {/* Capacity */}
-          <div>
-            <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
-              Capacity
-            </label>
-            <input
-              type="number"
-              name="capacity"
-              value={form.capacity}
-              onChange={handleChange}
-              min="0"
-              placeholder="0"
-              className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
-            />
+          {/* Capacity + Manager row */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                Capacity
+              </label>
+              <input
+                type="number"
+                name="capacity"
+                value={form.capacity}
+                onChange={handleChange}
+                min="0"
+                placeholder="0"
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1.5">
+                Assigned Manager
+              </label>
+              <select
+                name="managerId"
+                value={form.managerId || ''}
+                onChange={handleChange}
+                className="w-full px-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/20 outline-none transition-all appearance-none"
+              >
+                <option value="">No manager assigned</option>
+                {managers.map(m => <option key={m.id} value={m.id}>{m.username}</option>)}
+              </select>
+            </div>
           </div>
 
           {/* Description */}
