@@ -1,8 +1,10 @@
 package org.example.backend.services;
 
+import org.example.backend.dtos.UserResponse;
 import org.example.backend.models.Role;
 import org.example.backend.models.User;
 import org.springframework.context.annotation.Profile;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -13,9 +15,13 @@ import java.util.stream.Collectors;
 @Profile("mock")
 public class MockUserService implements UserService {
 
-    private final List<User> mockUsers = new ArrayList<>();
+    private static final String DEMO_PASSWORD = "password123";
 
-    public MockUserService() {
+    private final List<User> mockUsers = new ArrayList<>();
+    private final PasswordEncoder passwordEncoder;
+
+    public MockUserService(PasswordEncoder passwordEncoder) {
+        this.passwordEncoder = passwordEncoder;
         mockUsers.add(createMockUser("Admin-1", "Admin User", "admin@campus.edu", Role.ADMIN));
         mockUsers.add(createMockUser("Admin-2", "Sarah Smith", "sarah@campus.edu", Role.ADMIN));
         mockUsers.add(createMockUser("Admin-3", "John Doe", "john@campus.edu", Role.ADMIN));
@@ -27,10 +33,71 @@ public class MockUserService implements UserService {
     private User createMockUser(String id, String name, String email, Role role) {
         User u = new User();
         u.setId(id);
-        u.setUsername(name);
+        u.setName(name);
         u.setEmail(email);
+        u.setPassword(passwordEncoder.encode(DEMO_PASSWORD));
         u.setRole(role);
+        u.setActive(true);
         return u;
+    }
+
+    @Override
+    public List<UserResponse> getAllUsers() {
+        return mockUsers.stream()
+                .map(user -> new UserResponse(
+                        user.getId(),
+                        user.getName(),
+                        user.getEmail(),
+                        user.getRole().name(),
+                        user.isActive()
+                ))
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public UserResponse getUserById(String id) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
+    }
+
+    @Override
+    public UserResponse updateUserRole(String id, String role) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setRole(Role.valueOf(role.toUpperCase()));
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
+    }
+
+    @Override
+    public void deleteUser(String id) {
+        mockUsers.removeIf(u -> u.getId().equals(id));
+    }
+
+    @Override
+    public UserResponse deactivateUser(String id) {
+        User user = mockUsers.stream().filter(u -> u.getId().equals(id)).findFirst()
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        user.setActive(false);
+        return new UserResponse(
+                user.getId(),
+                user.getName(),
+                user.getEmail(),
+                user.getRole().name(),
+                user.isActive()
+        );
     }
 
     @Override
@@ -39,7 +106,22 @@ public class MockUserService implements UserService {
     }
 
     @Override
-    public List<User> getAllUsers() {
-        return mockUsers;
+    public User save(User user) {
+        if (user.getId() == null) {
+            user.setId("Mock-" + (mockUsers.size() + 1));
+        }
+        mockUsers.removeIf(u -> u.getId().equals(user.getId()));
+        mockUsers.add(user);
+        return user;
+    }
+
+    @Override
+    public boolean existsByEmail(String email) {
+        return mockUsers.stream().anyMatch(u -> u.getEmail().equals(email));
+    }
+
+    @Override
+    public User findByEmail(String email) {
+        return mockUsers.stream().filter(u -> u.getEmail().equals(email)).findFirst().orElse(null);
     }
 }

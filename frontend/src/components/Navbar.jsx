@@ -1,7 +1,6 @@
 import React from "react";
 import { NavLink, Link, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { getUnreadCount } from '../services/api';
 import {
   Layout,
   PlusCircle,
@@ -13,15 +12,25 @@ import {
   UserCircle,
   Bell,
   Settings,
-  BarChart3,
-  Hexagon,
+  Activity,
   Info,
+  Hexagon,
   LayoutDashboard,
+  Inbox,
+  BarChart3,
   ListChecks,
   LineChart,
-  Activity,
+  ChevronDown,
+  ShieldHalf,
+  Command,
+  Settings2,
+  AlertCircle,
+  Wrench,
+  ClipboardList
 } from "lucide-react";
-
+import {
+  getUnreadCount
+} from "../services/api";
 
 const UnreadBadge = () => {
   const [count, setCount] = React.useState(0);
@@ -51,6 +60,8 @@ const UnreadBadge = () => {
 
 const Navbar = () => {
   const [isScrolled, setIsScrolled] = React.useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = React.useState(false);
+  const dropdownRef = React.useRef(null);
   const user = JSON.parse(localStorage.getItem("user"));
   const navigate = useNavigate();
 
@@ -60,8 +71,19 @@ const Navbar = () => {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     navigate("/login");
     window.location.reload();
   };
@@ -70,111 +92,147 @@ const Navbar = () => {
   const commonItems = [
     { path: "/", label: "Home", icon: <Home size={18} /> },
     { path: "/resources", label: "Resources", icon: <Hexagon size={18} /> },
-    {
-      path: "/availability",
-      label: "Availability",
-      icon: <Activity size={18} />,
-    },
+    { path: "/availability", label: "Availability", icon: <Activity size={18} /> },
     { path: "/about", label: "About", icon: <Info size={18} /> },
   ];
 
   // Role-Specific logic
   const getRoleItems = () => {
-    if (!user) return []; // Guest handled via "user ?" logic in UI
+    if (!user) return [];
+    switch (user.role) {
+      case 'ADMIN':
+        return [
+          { path: '/admin', label: 'Admin Panel', icon: <LayoutDashboard size={18} /> },
+          { path: '/ticket-list', label: 'Incidents', icon: <AlertCircle size={18} /> },
+        ];
+      case 'MANAGER':
+        return [
+          { path: '/admin', label: 'Manager Panel', icon: <LayoutDashboard size={18} /> },
+          { path: '/admin/analytics', label: 'Analytics', icon: <BarChart3 size={18} /> },
+        ];
+      case 'TECHNICIAN':
+        return [
+          { path: '/technician', label: 'Tech Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/technician/tickets', label: 'My Work', icon: <ClipboardList size={18} /> },
+        ];
+      case 'USER':
+        return [
+          { path: '/bookings', label: 'Book', icon: <PlusCircle size={18} /> },
+          { path: '/my-bookings', label: 'My Bookings', icon: <User size={18} /> },
+          { path: '/my-incidents', label: 'My Incidents', icon: <AlertCircle size={18} /> },
+        ];
+      default:
+        return [];
+    }
+  };
 
+  const getManagementItems = () => {
+    if (!user) return [];
     switch (user.role) {
       case "ADMIN":
-    return [
-        {
-            path: "/admin",
-            label: "Admin Dashboard",
-            icon: <LayoutDashboard size={18} />,
-        },
-        {
-            path: "/my-bookings",
-            label: "All Bookings",
-            icon: <ListChecks size={18} />,
-        },
-        {
-            path: "/users",
-            label: "User Management",
-            icon: <Shield size={18} />,
-        },
-    ];
+        return [
+          { path: '/admin/bookings', label: 'Manage Requests', icon: <Inbox size={18} /> },
+          { path: '/admin/analytics', label: 'Strategic Analytics', icon: <BarChart3 size={18} /> },
+          { path: '/admin', label: 'Admin Dashboard', icon: <LayoutDashboard size={18} /> },
+          { path: '/my-bookings', label: 'All Bookings', icon: <ListChecks size={18} /> },
+          { path: '/ticket-list', label: 'Ticket List', icon: <AlertCircle size={18} /> },
+          { path: '/technician-management', label: 'Technician Management', icon: <Wrench size={18} /> },
+        ];
       case "MANAGER":
-        // ✅ 5. MANAGER Navbar
         return [
-          {
-            path: "/admin",
-            label: "Analytics Dashboard",
-            icon: <LineChart size={18} />,
-          },
+          { path: '/admin/bookings', label: 'Evaluate Requests', icon: <Inbox size={18} /> },
+          { path: '/admin/analytics', label: 'Operational Analytics', icon: <BarChart3 size={18} /> },
+          { path: '/admin', label: 'Analytics Dashboard', icon: <LineChart size={18} /> },
         ];
-      case "USER":
       default:
-        // ✅ 3. USER Navbar (Student / Staff)
-        return [
-          {
-            path: "/bookings",
-            label: "Book Resource",
-            icon: <PlusCircle size={18} />,
-          },
-          {
-            path: "/my-bookings",
-            label: "My Bookings",
-            icon: <User size={18} />,
-          },
-        ];
+        return [];
     }
   };
 
   const navItems = [...commonItems, ...getRoleItems()];
+  const managementItems = getManagementItems();
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/80 backdrop-blur-2xl border-b border-white/40 shadow-sm py-4">
-      <div className="max-w-[1440px] mx-auto px-6 h-24 flex items-center justify-between">
+    <nav className="fixed top-0 left-0 right-0 z-[100] transition-all duration-500 bg-white/90 backdrop-blur-2xl border-b border-white/40 shadow-sm py-2">
+      <div className="max-w-[1440px] mx-auto px-6 h-18 flex items-center justify-between">
         {/* Logo */}
-        <Link to="/" className="flex items-center gap-4 group">
+        <Link to="/" className="flex items-center gap-3 group">
           <motion.div
             whileHover={{ scale: 1.05, rotate: 5 }}
-            className="w-12 h-12 rounded-2xl flex items-center justify-center text-white transition-all shadow-2xl bg-indigo-600 shadow-indigo-200"
+            className={`w-10 h-10 rounded-xl flex items-center justify-center text-white transition-all shadow-xl ${user?.role === 'ADMIN' ? 'bg-rose-600' : user?.role === 'MANAGER' ? 'bg-amber-600' : 'bg-indigo-600'}`}
           >
-            <Layout size={28} />
+            <ShieldHalf size={22} />
           </motion.div>
           <div className="flex flex-col">
-            <span className="text-2xl font-black tracking-tight leading-none transition-colors text-slate-800">
+            <span className="text-xl font-black tracking-tight leading-none text-slate-900 group-hover:text-indigo-600 transition-colors">
               SmartCampus
             </span>
-            <span className="text-[10px] font-bold uppercase tracking-[0.2em] transition-colors text-indigo-500">
-              Excellence Portal
+            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-slate-400">
+              Operations Center
             </span>
           </div>
         </Link>
 
         {/* Main Nav */}
-        <div className="hidden lg:flex items-center gap-1.5 p-1 rounded-2xl border transition-all bg-slate-900/5 border-slate-900/5">
+        <div className="hidden lg:flex items-center gap-1.5 p-1.5 rounded-[1.25rem] bg-slate-100/80 border border-slate-200/40">
           {navItems.map((item) => (
             <NavLink
               key={item.path}
               to={item.path}
+              end
               className={({ isActive }) => `
-                relative flex items-center gap-2 px-5 py-2.5 rounded-xl font-bold transition-all text-sm overflow-hidden group
+                relative flex items-center gap-2 px-4 py-2.5 rounded-xl font-black transition-all text-[12px] group
                 ${
                   isActive
-                    ? "bg-white text-indigo-700 shadow-sm active border border-indigo-100/50"
-                    : "text-slate-500 hover:text-slate-900 hover:bg-white/50"
+                    ? "bg-white text-indigo-700 shadow-sm border border-indigo-100/50"
+                    : "text-slate-500 hover:text-slate-900 hover:bg-white/40 uppercase tracking-tighter"
                 }
               `}
             >
-              {item.icon}
-              {item.label}
-              <div className="absolute bottom-0 left-0 right-0 h-0.5 transition-all opacity-0 group-[.active]:opacity-100 bg-indigo-600" />
+              {({ isActive }) => (
+                <>
+                  <span className={`${isActive ? 'text-indigo-600' : 'text-slate-400 group-hover:text-indigo-500'} transition-colors`}>
+                    {React.cloneElement(item.icon, { size: 16 })}
+                  </span>
+                  {item.label}
+                </>
+              )}
             </NavLink>
           ))}
+
+          {managementItems.length > 0 && (
+            <div className="h-6 w-px bg-slate-200/60 mx-1.5" />
+          )}
+
+          {managementItems.length > 0 && (
+             <div className="relative group/mgmt">
+                <button className="flex items-center gap-2 px-4 py-2.5 rounded-xl font-black text-[12px] text-slate-500 hover:text-indigo-700 hover:bg-white/40 transition-all uppercase tracking-tighter">
+                  <Command size={16} className="text-indigo-500" />
+                  Management
+                  <ChevronDown size={12} className="group-hover/mgmt:rotate-180 transition-transform ml-1" />
+                </button>
+                
+                <div className="absolute top-full left-0 mt-2 w-64 bg-white border border-slate-100 rounded-2xl shadow-2xl py-3 opacity-0 invisible translate-y-2 group-hover/mgmt:opacity-100 group-hover/mgmt:visible group-hover/mgmt:translate-y-0 transition-all z-[200]">
+                  {managementItems.map((item) => (
+                    <NavLink
+                      key={item.path}
+                      to={item.path}
+                      className={({ isActive }) => `
+                        flex items-center gap-3 px-5 py-3 text-sm font-bold transition-all
+                        ${isActive ? 'text-indigo-600 bg-indigo-50/50' : 'text-slate-600 hover:text-indigo-600 hover:bg-slate-50'}
+                      `}
+                    >
+                      {item.icon}
+                      {item.label}
+                    </NavLink>
+                  ))}
+                </div>
+             </div>
+          )}
         </div>
 
         {/* User Actions */}
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 relative">
           <div className="hidden sm:flex items-center gap-2 mr-2">
             <Link
               to="/notifications"
@@ -189,53 +247,53 @@ const Navbar = () => {
           </div>
 
           {user ? (
-            <div className="flex items-center gap-3 p-1.5 pr-4 rounded-2xl border transition-all bg-white border-slate-100 shadow-sm">
-              <motion.div
-                whileHover={{ rotate: 5 }}
-                className={`p-2.5 rounded-xl text-white shadow-lg ${
-                  user.role === "ADMIN"
-                    ? "bg-rose-500"
-                    : user.role === "MANAGER"
-                      ? "bg-amber-500"
-                      : "bg-indigo-600"
-                }`}
-              >
-                <UserCircle size={22} />
-              </motion.div>
-              <div className="hidden sm:block">
-                <div className="text-sm font-black leading-none mb-1 transition-colors text-slate-900">
-                  {user.username}
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <div
-                    className={`w-1.5 h-1.5 rounded-full ${
-                      user.role === "ADMIN"
-                        ? "bg-rose-500"
-                        : user.role === "MANAGER"
-                          ? "bg-amber-500"
-                          : "bg-indigo-500"
-                    }`}
-                  />
-                  <span className="text-[10px] font-black uppercase tracking-widest transition-colors text-slate-400">
-                    {user.role}
-                  </span>
-                </div>
-              </div>
-              <div className="h-8 w-px mx-2 transition-colors bg-slate-100" />
-              <button
-                onClick={handleLogout}
-                className="p-2 transition-colors text-slate-400 hover:text-rose-600"
-                title="Logout"
-              >
-                <LogOut size={20} />
-              </button>
+            <div className="relative" ref={dropdownRef}>
+               {/* User Info Card / Dropdown Trigger */}
+               <button 
+                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                  className="flex items-center gap-2.5 p-1 pr-3 rounded-xl border bg-white border-slate-200 hover:border-indigo-300 transition-all focus:outline-none group shadow-sm hover:shadow-md"
+               >
+                  <div className={`p-2 rounded-lg text-white shadow-sm transition-transform group-hover:scale-105 ${user.role === 'ADMIN' ? 'bg-rose-500' : user.role === 'MANAGER' ? 'bg-amber-500' : user.role === 'TECHNICIAN' ? 'bg-teal-600' : 'bg-indigo-600'}`}>
+                    <UserCircle size={18} />
+                  </div>
+                  <div className="hidden lg:block text-left">
+                    <p className="text-[12px] font-black text-slate-800 leading-none">{user.name || 'User'}</p>
+                    <p className="text-[8px] font-black text-slate-400 tracking-wider uppercase mt-0.5">{user.role}</p>
+                  </div>
+                  <ChevronDown size={12} className={`text-slate-300 ml-0.5 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
+               </button>
+
+               {/* Dropdown Menu */}
+               {isDropdownOpen && (
+                 <div className="absolute right-0 mt-3 w-60 bg-white border border-slate-100 rounded-2xl shadow-2xl py-2 z-[999] overflow-hidden origin-top-right animate-in fade-in zoom-in-95 duration-200">
+                    <div className="px-4 py-3 border-b border-slate-100/80 mb-1 bg-slate-50/50">
+                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-0.5">Signed in as</p>
+                      <p className="text-sm font-bold text-slate-900 truncate">{user.email || 'user@campus.edu'}</p>
+                    </div>
+                    
+                    <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="flex items-center gap-3 px-4 py-3 text-sm font-bold text-slate-600 hover:text-indigo-600 hover:bg-slate-50 transition-colors">
+                      <User size={16} />
+                      Profile Settings
+                    </Link>
+                    
+                    <div className="h-px bg-slate-100 my-1 mx-4" />
+                    
+                    <button
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-3 px-4 py-3 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors"
+                    >
+                      <LogOut size={16} />
+                      Sign Out
+                    </button>
+                 </div>
+               )}
             </div>
           ) : (
             <div className="flex items-center gap-4">
               {/* ✅ 2. Guest View: Show Login */}
               <Link
                 to="/login"
-                className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-2xl shadow-slate-200"
+                className="px-8 py-3.5 rounded-2xl font-black text-xs transition-all flex items-center gap-2 uppercase tracking-widest bg-slate-900 text-white hover:bg-slate-800 shadow-xl shadow-slate-200"
               >
                 Sign In
               </Link>

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Mail, Lock, LogIn, ArrowRight, ShieldCheck, User as UserIcon, Briefcase } from 'lucide-react';
+import { Mail, Lock, LogIn, ArrowRight, ShieldCheck, User as UserIcon, Briefcase, Wrench } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
@@ -12,7 +12,7 @@ const LoginPage = () => {
     e.preventDefault();
     // Simulate login by saving user data to localStorage
     const mockUser = {
-      id: role === 'ADMIN' ? 99 : role === 'MANAGER' ? 50 : 1,
+      id: role === 'ADMIN' ? 99 : role === 'MANAGER' ? 50 : role === 'TECHNICIAN' ? 75 : 1,
       username: username || 'Demo User',
       role: role
     };
@@ -21,6 +21,8 @@ const LoginPage = () => {
     // Redirect based on role
     if (role === 'ADMIN' || role === 'MANAGER') {
       navigate('/admin');
+    } else if (role === 'TECHNICIAN') {
+      navigate('/technician');
     } else {
       navigate('/dashboard');
     }
@@ -29,7 +31,7 @@ const LoginPage = () => {
   };
 
   return (
-    <div className="min-h-[80vh] flex items-center justify-center px-4">
+    <div className="min-h-[80vh] flex items-center justify-center px-4 pt-40">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -64,11 +66,12 @@ const LoginPage = () => {
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 ml-1">Assign Role</label>
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-4 gap-2">
                 {[
                   { id: 'USER', label: 'User', icon: <UserIcon size={14} /> },
                   { id: 'ADMIN', label: 'Admin', icon: <ShieldCheck size={14} /> },
-                  { id: 'MANAGER', label: 'Manager', icon: <Briefcase size={14} /> }
+                  { id: 'MANAGER', label: 'Manager', icon: <Briefcase size={14} /> },
+                  { id: 'TECHNICIAN', label: 'Technician', icon: <Wrench size={14} /> }
                 ].map((r) => (
                   <button
                     key={r.id}

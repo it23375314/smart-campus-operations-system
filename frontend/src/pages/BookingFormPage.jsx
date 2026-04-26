@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, Clock, Users, FileText, Send, CheckCircle, Package, ArrowLeft } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { Calendar, Clock, Users, FileText, Send, CheckCircle, Package, ArrowLeft, AlertCircle } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
-import axios from 'axios';
+import toast from 'react-hot-toast';
 import bookingService from '../services/bookingService';
+import resourceService from '../services/resourceService';
 
 const BookingFormPage = () => {
   const location = useLocation();
@@ -12,79 +13,151 @@ const BookingFormPage = () => {
 
   const [formData, setFormData] = useState({
     resourceId: passedResourceId,
+    bookingDate: '',
     startTime: '',
     endTime: '',
     purpose: '',
     attendees: 1
   });
 
+  const [resources, setResources] = useState([]);
   const [resourceInfo, setResourceInfo] = useState(null);
-  const [status, setStatus] = useState({ type: '', message: '' });
+  const [availabilitySlots, setAvailabilitySlots] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [fetchingResource, setFetchingResource] = useState(!!passedResourceId);
+  const [fieldErrors, setFieldErrors] = useState({});
 
   useEffect(() => {
+    fetchAllResources();
     if (passedResourceId) {
       fetchResourceDetails(passedResourceId);
     }
   }, [passedResourceId]);
 
-  const fetchResourceDetails = async (id) => {
-    setFetchingResource(true);
+  useEffect(() => {
+    if (formData.resourceId && formData.bookingDate) {
+      fetchAvailability(formData.resourceId, formData.bookingDate);
+    } else {
+      setAvailabilitySlots([]);
+    }
+  }, [formData.resourceId, formData.bookingDate]);
+
+  const fetchAllResources = async () => {
     try {
-      const res = await axios.get(`http://localhost:8085/api/resources/${id}`);
-      setResourceInfo(res.data);
+      const data = await resourceService.getAllResources();
+      setResources(data);
+    } catch (err) {
+      console.error("Failed to fetch resources list:", err);
+    }
+  };
+
+  const fetchResourceDetails = async (id) => {
+    try {
+      const data = await resourceService.getResourceById(id);
+      setResourceInfo(data);
     } catch (err) {
       console.error("Failed to fetch resource details:", err);
-    } finally {
-      setFetchingResource(false);
     }
+  };
+
+  const fetchAvailability = async (resId, date) => {
+    try {
+      const slots = await bookingService.getAvailability(resId, date);
+      setAvailabilitySlots(slots);
+    } catch (err) {
+      console.error("Failed to fetch availability:", err);
+    }
+  };
+
+  const validateForm = () => {
+    const errors = {};
+    const now = new Date();
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (!formData.resourceId) errors.resourceId = "Institutional asset selection is mandatory.";
+    if (!formData.bookingDate) errors.bookingDate = "A target reservation date must be declared.";
+    if (formData.bookingDate < todayStr) errors.bookingDate = "Retroactive reservations are prohibited.";
+
+    if (!formData.startTime) errors.startTime = "Start time is required.";
+    if (!formData.endTime) errors.endTime = "End time is required.";
+
+    if (formData.startTime && formData.endTime && formData.startTime >= formData.endTime) {
+      errors.endTime = "Chronological violation: End time must follow start time.";
+    }
+
+    if (formData.bookingDate === todayStr && formData.startTime) {
+      const currentHour = now.getHours();
+      const currentMin = now.getMinutes();
+      const [h, m] = formData.startTime.split(':').map(Number);
+      if (h < currentHour || (h === currentHour && m <= currentMin)) {
+        errors.startTime = "Temporal constraint: Start time must exist in the future.";
+      }
+    }
+
+    if (!formData.purpose || formData.purpose.trim().length < 5) {
+      errors.purpose = "Comprehensive justification (minimum 5 characters) is required.";
+    }
+
+    if (formData.attendees <= 0) {
+      errors.attendees = "Synchronization payload requires at least 1 attendee.";
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    setStatus({ type: '', message: '' });
+    setFieldErrors({});
 
-    // Get current user from localStorage
+    const clientErrors = validateForm();
+    if (Object.keys(clientErrors).length > 0) {
+      setFieldErrors(clientErrors);
+      toast.error("Form integrity check failed. Please correct the highlighted segments.");
+      return;
+    }
+
+    setLoading(true);
+
     const userJson = localStorage.getItem('user');
     if (!userJson) {
-      setStatus({ type: 'error', message: 'User not authenticated. Please login again.' });
+      toast.error('Identity not verified. Please authenticat again.');
       setLoading(false);
       return;
     }
 
     const currentUser = JSON.parse(userJson);
+    const startDateTime = `${formData.bookingDate}T${formData.startTime}:00`;
+    const endDateTime = `${formData.bookingDate}T${formData.endTime}:00`;
 
     try {
       await bookingService.createBooking({
-        ...formData,
-        userId: currentUser.id,
         resourceId: formData.resourceId,
         attendees: parseInt(formData.attendees),
-        startTime: formData.startTime.replace(' ', 'T'),
-        endTime: formData.endTime.replace(' ', 'T')
+        startTime: startDateTime,
+        endTime: endDateTime,
+        purpose: formData.purpose
       });
-      setStatus({ type: 'success', message: 'Booking created successfully! Pending approval.' });
-      
-      // Clear form except for resource if it was passed
+
+      toast.success('Resource synchronized successfully! Registry updated.');
+
       setFormData({
         resourceId: passedResourceId,
+        bookingDate: '',
         startTime: '',
         endTime: '',
         purpose: '',
         attendees: 1
       });
-      
-      // Redirect after short delay
-      setTimeout(() => navigate('/my-bookings'), 2000);
-      
+
     } catch (error) {
-      const errorMsg = error.response?.data || error.message;
-      setStatus({ 
-        type: 'error', 
-        message: typeof errorMsg === 'object' ? Object.values(errorMsg).join(', ') : errorMsg 
-      });
+      if (error.response?.status === 400 && typeof error.response.data === 'object') {
+        // Map Spring MethodArgumentNotValidException errors
+        setFieldErrors(error.response.data);
+        toast.error("Structural validation failure. See specific field metrics.");
+      } else if (error.response?.status === 409) {
+        toast.error("Temporal Conflict: Selected slot has active synchronization.");
+      } else {
+        toast.error(error.response?.data || error.message || "An unexpected synchronization error occurred.");
+      }
     } finally {
       setLoading(false);
     }
@@ -93,16 +166,17 @@ const BookingFormPage = () => {
   return (
     <div className="bg-slate-50 min-h-screen pt-40 pb-20 relative overflow-hidden bg-blueprint">
       <div className="absolute inset-0 bg-slate-50/95 backdrop-blur-[1px] pointer-events-none" />
-      
+      <div className="grain-overlay" />
+
       <div className="max-w-4xl mx-auto px-6 relative z-10">
         <Link to="/resources" className="inline-flex items-center gap-2 text-indigo-600 font-black tracking-widest uppercase text-[10px] mb-8 hover:gap-3 transition-all">
-          <ArrowLeft size={14} /> Back to Assets
+          <ArrowLeft size={14} /> Back to Assets Matrix
         </Link>
 
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="glass-heavy p-10 rounded-[3rem] border border-white shadow-2xl bg-white/40"
+          className="glass-heavy bg-white/70 p-10 rounded-[3.5rem] border border-white shadow-2xl"
         >
           {/* Header */}
           <div className="flex items-center gap-6 mb-12">
@@ -110,143 +184,189 @@ const BookingFormPage = () => {
               <Calendar size={32} />
             </div>
             <div>
-              <h1 className="text-4xl font-prestige text-slate-900">Resource Registration</h1>
-              <p className="text-sm font-medium text-slate-500 uppercase tracking-widest">Reserve Excellence for your next project</p>
+              <h1 className="text-4xl font-prestige text-slate-900">Resource Registry.</h1>
+              <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Formal Authorization Submission</p>
             </div>
           </div>
 
-          {/* Selected Resource Info Card */}
-          {resourceInfo && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              className="mb-10 p-6 bg-slate-900 rounded-3xl text-white flex items-center gap-6 border border-slate-800 shadow-2xl"
-            >
-              <div className="w-20 h-20 rounded-2xl overflow-hidden bg-slate-800 flex-shrink-0">
-                {resourceInfo.imageUrl ? (
-                  <img src={resourceInfo.imageUrl} className="w-full h-full object-cover" alt={resourceInfo.name} />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-600">
-                    <Package size={30} />
-                  </div>
-                )}
-              </div>
-              <div className="flex-1">
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-indigo-400 mb-1 block">Requesting Access to</span>
-                <h3 className="text-xl font-prestige">{resourceInfo.name}</h3>
-                <div className="flex items-center gap-4 mt-2">
-                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                     <Users size={12} /> {resourceInfo.capacity} Capacity
-                   </div>
-                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400">
-                     <Package size={12} /> {resourceInfo.category}
-                   </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
+          <form onSubmit={handleSubmit} className="space-y-10">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-10 gap-y-10">
 
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {!passedResourceId && (
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Asset Reference ID</label>
-                  <div className="relative">
-                    <FileText className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                    <input
-                      type="text"
-                      placeholder="e.g. 65f...123"
-                      className="w-full pl-14 pr-6 py-4 bg-white/70 border border-white rounded-2xl font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 outline-none transition-all shadow-inner"
-                      value={formData.resourceId}
-                      onChange={(e) => setFormData({...formData, resourceId: e.target.value})}
-                      required
-                    />
-                  </div>
+              {/* Resource Target */}
+              <div className="space-y-4 col-span-1 md:col-span-2">
+                <div className="flex justify-between items-end px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Distribution Target</label>
+                  {fieldErrors.resourceId && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1"><AlertCircle size={10} /> {fieldErrors.resourceId}</span>}
                 </div>
-              )}
-
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expected Attendance</label>
                 <div className="relative">
-                  <Users className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <Package className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.resourceId ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
+                  <select
+                    className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-[2rem] font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner appearance-none cursor-pointer
+                      ${fieldErrors.resourceId ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                    `}
+                    value={formData.resourceId}
+                    onChange={(e) => {
+                      setFieldErrors({ ...fieldErrors, resourceId: null });
+                      setFormData({ ...formData, resourceId: e.target.value });
+                      if (e.target.value) fetchResourceDetails(e.target.value);
+                    }}
+                    disabled={!!passedResourceId}
+                  >
+                    <option value="" disabled>Search organizational unit inventory...</option>
+                    {resources.map(r => (
+                      <option key={r.id} value={r.id}>{r.name} — {r.category}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Date */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Temporal Anchor (Date)</label>
+                  {fieldErrors.bookingDate && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1 text-right"><AlertCircle size={10} /> {fieldErrors.bookingDate}</span>}
+                </div>
+                <div className="relative">
+                  <Calendar className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.bookingDate ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
+                  <input
+                    type="date"
+                    className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-2xl font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner
+                      ${fieldErrors.bookingDate ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                    `}
+                    value={formData.bookingDate}
+                    onChange={(e) => {
+                      setFieldErrors({ ...fieldErrors, bookingDate: null });
+                      setFormData({ ...formData, bookingDate: e.target.value });
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Attendees */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Synchronization Payload (Attendees)</label>
+                  {fieldErrors.attendees && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1 text-right"><AlertCircle size={10} /> {fieldErrors.attendees}</span>}
+                </div>
+                <div className="relative">
+                  <Users className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.attendees ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
                   <input
                     type="number"
                     min="1"
-                    className="w-full pl-14 pr-6 py-4 bg-white/70 border border-white rounded-2xl font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 outline-none transition-all shadow-inner"
+                    className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-2xl font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner
+                      ${fieldErrors.attendees ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                    `}
                     value={formData.attendees}
-                    onChange={(e) => setFormData({...formData, attendees: e.target.value})}
-                    required
+                    onChange={(e) => {
+                      setFieldErrors({ ...fieldErrors, attendees: null });
+                      setFormData({ ...formData, attendees: e.target.value });
+                    }}
                   />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Commencement Time</label>
+              {/* Times */}
+              <div className="space-y-4">
+                <div className="flex justify-between items-end px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Initiation Time</label>
+                  {fieldErrors.startTime && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1 text-right"><AlertCircle size={10} /> {fieldErrors.startTime}</span>}
+                </div>
                 <div className="relative">
-                  <Clock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <Clock className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.startTime ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
                   <input
-                    type="datetime-local"
-                    className="w-full pl-14 pr-6 py-4 bg-white/70 border border-white rounded-2xl font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 outline-none transition-all shadow-inner"
+                    type="time"
+                    className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-2xl font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner
+                      ${fieldErrors.startTime ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                    `}
                     value={formData.startTime}
-                    onChange={(e) => setFormData({...formData, startTime: e.target.value})}
-                    required
+                    onChange={(e) => {
+                      setFieldErrors({ ...fieldErrors, startTime: null });
+                      setFormData({ ...formData, startTime: e.target.value });
+                    }}
                   />
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Conclusion Time</label>
+              <div className="space-y-4">
+                <div className="flex justify-between items-end px-1">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Termination Time</label>
+                  {fieldErrors.endTime && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1 text-right"><AlertCircle size={10} /> {fieldErrors.endTime}</span>}
+                </div>
                 <div className="relative">
-                  <Clock className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <Clock className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${fieldErrors.endTime ? 'text-rose-400' : 'text-slate-300'}`} size={18} />
                   <input
-                    type="datetime-local"
-                    className="w-full pl-14 pr-6 py-4 bg-white/70 border border-white rounded-2xl font-bold text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 outline-none transition-all shadow-inner"
+                    type="time"
+                    className={`w-full pl-14 pr-6 py-5 bg-white/70 border rounded-2xl font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner
+                      ${fieldErrors.endTime ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                    `}
                     value={formData.endTime}
-                    onChange={(e) => setFormData({...formData, endTime: e.target.value})}
-                    required
+                    onChange={(e) => {
+                      setFieldErrors({ ...fieldErrors, endTime: null });
+                      setFormData({ ...formData, endTime: e.target.value });
+                    }}
                   />
                 </div>
               </div>
             </div>
 
-            <div className="space-y-3">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Executive Summary / Purpose</label>
+            {/* Live Availability Heatmap */}
+            <AnimatePresence>
+              {availabilitySlots.length > 0 && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 shadow-2xl overflow-hidden"
+                >
+                  <h4 className="text-[10px] font-black uppercase text-indigo-400 tracking-[0.3em] mb-6 flex items-center gap-2">
+                    <Clock size={12} className="animate-pulse" /> Asset Occupancy Heatmap
+                  </h4>
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                    {availabilitySlots.map((slot, i) => (
+                      <div key={i} className={`p-3 rounded-2xl text-center border text-[10px] font-bold tracking-widest transition-all ${slot.status === 'AVAILABLE'
+                          ? 'bg-slate-800 border-slate-700 text-slate-400 hover:border-indigo-500 hover:text-white'
+                          : 'bg-rose-500/10 border-rose-500/20 text-rose-500 shadow-[inset_0_0_10px_rgba(244,63,94,0.05)]'
+                        }`}>
+                        <div>{slot.startTime}</div>
+                        <div className="opacity-40 text-[7px] uppercase mt-1 tracking-tighter">{slot.status}</div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            {/* Purpose */}
+            <div className="space-y-4">
+              <div className="flex justify-between items-end px-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Authorization Justification / Purpose</label>
+                {fieldErrors.purpose && <span className="text-[9px] font-black text-rose-500 uppercase tracking-tighter flex items-center gap-1 text-right"><AlertCircle size={10} /> {fieldErrors.purpose}</span>}
+              </div>
               <textarea
                 rows="4"
-                placeholder="Briefly state the research or administrative justification for this reservation..."
-                className="w-full px-6 py-4 bg-white/70 border border-white rounded-[2rem] font-medium text-slate-900 focus:ring-4 focus:ring-indigo-500/10 focus:border-indigo-500/30 outline-none transition-all shadow-inner resize-none"
+                placeholder="Declare the strategic or academic intent of this resource synchronization..."
+                className={`w-full px-8 py-5 bg-white/70 border rounded-[2.5rem] font-bold text-slate-900 focus:ring-4 outline-none transition-all shadow-inner resize-none
+                    ${fieldErrors.purpose ? 'border-rose-200 focus:ring-rose-500/10 focus:border-rose-400' : 'border-white focus:ring-indigo-500/10 focus:border-indigo-500/30'}
+                `}
                 value={formData.purpose}
-                onChange={(e) => setFormData({...formData, purpose: e.target.value})}
-                required
+                onChange={(e) => {
+                  setFieldErrors({ ...fieldErrors, purpose: null });
+                  setFormData({ ...formData, purpose: e.target.value });
+                }}
               ></textarea>
             </div>
-
-            {status.message && (
-              <motion.div 
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className={`p-6 rounded-[2rem] flex items-center gap-4 ${
-                  status.type === 'success' 
-                    ? 'bg-emerald-500/10 text-emerald-700 border border-emerald-500/20' 
-                    : 'bg-rose-500/10 text-rose-700 border border-rose-500/20'
-                }`}
-              >
-                <CheckCircle size={24} />
-                <p className="text-sm font-bold uppercase tracking-widest">{status.message}</p>
-              </motion.div>
-            )}
 
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-5 bg-slate-900 text-white font-black uppercase tracking-[0.3em] text-[11px] rounded-[2rem] shadow-2xl transition-all hover:bg-slate-800 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 group flex items-center justify-center gap-4"
+              className="w-full py-6 bg-slate-900 text-white font-black uppercase tracking-[0.4em] text-[12px] rounded-[2.5rem] shadow-2xl transition-all hover:bg-indigo-600 hover:-translate-y-1 active:translate-y-0 disabled:opacity-50 group flex items-center justify-center gap-4 relative overflow-hidden"
             >
               {loading ? (
-                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                <div className="w-6 h-6 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
               ) : (
                 <>
-                  Submit Authorization Request
-                  <Send size={16} className="group-hover:translate-x-1 transition-transform" />
+                  Commit Synchronization Cycle
+                  <Send size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                 </>
               )}
             </button>
